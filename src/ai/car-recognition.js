@@ -1,0 +1,154 @@
+// The recognition pipeline: detect vehicles -> crop -> international classifier -> (maybe) Iranian
+// classifier -> routing decision -> display-ready result. Runs inside a Web Worker (or on the main thread
+// as a fallback) - it only needs ImageBitmap + OffscreenCanvas/canvas, never the DOM.
+
+import { DETECTION, LABEL_BASE_URL, MODELS, ROUTING } from '../config.js';
+import { HALF, IMAGENET, cropToRGBTensorData, letterboxBGR } from '../image/image-processor.js';
+import { ModelManager } from './model-manager.js';
+import { decide, needsIranianModel } from './model-router.js';
+import { decodeYolox, softmax, toCandidates, topK } from './prediction-processor.js';
+
+export class CarRecognizer {
+  /** @param {(e:object)=>void} [onEvent] progress callback: {type:'status'|'model', ...} */
+  constructor(onEvent) {
+    this.onEvent = onEvent || (() => {});
+    this.manager = new ModelManager((e) => this.onEvent({ type: 'model', ...e }));
+    this.labels = {}; // key -> Promise<array>
+    this.usedProviders = {};
+  }
+
+  capabilities() {
+    return this.manager.capabilities();
+  }
+
+  configure(opts) {
+    this.manager.configure(opts);
+  }
+
+  #labels(key) {
+    if (!this.labels[key]) {
+      this.labels[key] = fetch(LABEL_BASE_URL + MODELS[key].labels)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .catch((e) => {
+          delete this.labels[key];
+          throw new Error(`Could not load the ${key} label file: ${e.message}`);
+        });
+    }
+    return this.labels[key];
+  }
+
+  #status(phase, extra = {}) {
+    this.onEvent({ type: 'status', phase, ...extra });
+  }
+
+  async detect(bitmap) {
+    const cfg = MODELS.detector;
+    this.#status('detect');
+    const { data, scale } = letterboxBGR(bitmap, cfg.inputSize);
+    const { output, provider } = await this.manager.run('detector', data, [1, 3, cfg.inputSize, cfg.inputSize]);
+    this.usedProviders.detector = provider;
+    return decodeYolox(output, { inputSize: cfg.inputSize, scale, imageWidth: bitmap.width, imageHeight: bitmap.height });
+  }
+
+  async #classifyInternational(bitmap, box) {
+    const cfg = MODELS.international;
+    const tensor = cropToRGBTensorData(bitmap, box, { width: cfg.inputSize, height: cfg.inputSize, ...HALF });
+    const { output, provider } = await this.manager.run('international', tensor, [1, 3, cfg.inputSize, cfg.inputSize]);
+    this.usedProviders.international = provider;
+    return toCandidates(topK(softmax(output), 3), await this.#labels('international'), 'international');
+  }
+
+  async #classifyIranian(bitmap, box) {
+    const cfg = MODELS.iranian;
+    const tensor = cropToRGBTensorData(bitmap, box, { width: cfg.inputWidth, height: cfg.inputHeight, ...IMAGENET });
+    const { output, provider } = await this.manager.run('iranian', tensor, [1, 3, cfg.inputHeight, cfg.inputWidth]);
+    this.usedProviders.iranian = provider;
+    return toCandidates(topK(softmax(output), 3), await this.#labels('iranian'), 'iranian');
+  }
+
+  /**
+   * @param {ImageBitmap} bitmap
+   * @param {{box?: object, detections?: object[], wholeImage?: boolean}} [options]
+   *   box: classify this region (user picked another vehicle); wholeImage: classify the entire image even if no
+   *   vehicle was found; detections: reuse a previous detection result instead of re-running the detector.
+   */
+  async recognize(bitmap, options = {}) {
+    const t0 = performance.now();
+    const timings = {};
+    const warnings = [];
+    const full = { x1: 0, y1: 0, x2: bitmap.width, y2: bitmap.height };
+
+    let detections = options.detections;
+    if (!detections) {
+      const t = performance.now();
+      detections = await this.detect(bitmap);
+      timings.detect = performance.now() - t;
+    }
+
+    let box = options.box;
+    let selected = box ? detections.findIndex((d) => d.x1 === box.x1 && d.y1 === box.y1) : 0;
+    if (!box) {
+      if (detections.length === 0) {
+        if (!options.wholeImage) {
+          return this.#result({ status: 'no-vehicle', detections, bitmap, timings, t0, warnings: ['no-vehicle'] });
+        }
+        box = full;
+        selected = -1;
+        warnings.push('no-vehicle-whole-image');
+      } else {
+        box = detections[0];
+        selected = 0;
+      }
+    }
+    if (detections.length > 1 && selected >= 0) warnings.push('multiple-vehicles');
+    const boxArea = ((box.x2 - box.x1) * (box.y2 - box.y1)) / (bitmap.width * bitmap.height);
+    if (box !== full && boxArea < 0.04) warnings.push('small-vehicle');
+
+    // --- classification (international first, Iranian only if needed) ---
+    const tc = performance.now();
+    this.#status('classify-international');
+    const international = await this.#classifyInternational(bitmap, box);
+    let iranian = null;
+    if (needsIranianModel(international[0].probability)) {
+      this.#status('classify-iranian');
+      iranian = await this.#classifyIranian(bitmap, box);
+    }
+    timings.classify = performance.now() - tc;
+
+    const decision = decide({ international, iranian });
+    if (decision.primary && decision.primary.probability < ROUTING.lowConfidenceWarn) warnings.push('low-confidence');
+    if (decision.verdict === 'uncertain') warnings.push('uncertain');
+
+    return this.#result({ status: 'ok', detections, selected, box, decision, bitmap, timings, t0, warnings, evaluated: { international: true, iranian: !!iranian } });
+  }
+
+  #result({ status, detections, selected = -1, box = null, decision = null, bitmap, timings, t0, warnings, evaluated = {} }) {
+    timings.total = performance.now() - t0;
+    const models = ['detector', 'international', 'iranian']
+      .filter((k) => this.usedProviders[k] && (k === 'detector' || evaluated[k]))
+      .map((k) => ({ key: k, title: MODELS[k].title, provider: this.usedProviders[k] }));
+    return {
+      status,
+      image: { width: bitmap.width, height: bitmap.height },
+      detections: detections.map((d) => ({ x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2, score: d.score, label: d.label })),
+      selected,
+      box,
+      verdict: decision?.verdict ?? null,
+      reason: decision?.reason ?? null,
+      primary: decision?.primary ?? null,
+      alternatives: decision?.alternatives ?? [],
+      warnings,
+      timings,
+      models,
+      thresholds: { international: ROUTING.internationalAccept, iranian: ROUTING.iranianAccept },
+      detectionThreshold: DETECTION.scoreThreshold,
+    };
+  }
+
+  releaseAll() {
+    return this.manager.releaseAll();
+  }
+}

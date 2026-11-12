@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="description" content="Identify Iranian and international cars using AI. Your images are processed privately inside your browser." />
+    <title>CarVision – AI car recognition</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233B82F6'/%3E%3Cpath d='M6 19l2-6a3 3 0 0 1 3-2h10a3 3 0 0 1 3 2l2 6v4h-3v-2H9v2H6z' fill='white'/%3E%3C/svg%3E" />
+    <script>
+      // Apply the saved/preferred theme before first paint (no flash).
+      try {
+        var t = localStorage.getItem('carvision-theme');
+        if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="./" aria-label="CarVision home">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="8" fill="currentColor" />
+            <path d="M6 19l2-6a3 3 0 0 1 3-2h10a3 3 0 0 1 3 2l2 6v4h-3v-2H9v2H6z" fill="#fff" />
+            <circle cx="11" cy="19" r="1.4" fill="currentColor" /><circle cx="21" cy="19" r="1.4" fill="currentColor" />
+          </svg>
+          <span class="brand-name">Car<span>Vision</span></span>
+        </a>
+        <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to light theme" title="Toggle theme">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A5.5 5.5 0 0 1 13.4 3.1C13 3 12.5 3 12 3z" /></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="container">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">Private · In-browser · No account</p>
+        <h1 id="hero-title">Identify Iranian and international cars with AI</h1>
+        <p class="lead">
+          Identify Iranian and international cars using artificial intelligence. Your images are processed privately inside your browser.
+        </p>
+      </section>
+
+      <div id="upload-error" class="alert error" role="alert" hidden></div>
+
+      <section id="upload-section" aria-label="Upload an image">
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-describedby="drop-hint" aria-label="Choose or drop a car photo">
+          <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M24 32V10m0 0-8 8m8-8 8 8M8 30v6a3 3 0 0 0 3 3h26a3 3 0 0 0 3-3v-6" /></svg>
+          <p class="drop-title">Drag &amp; drop a car photo here</p>
+          <p id="drop-hint" class="muted">JPG, PNG or WEBP · up to 15 MB</p>
+          <div class="drop-actions">
+            <button id="browse-btn" class="btn primary" type="button">Browse files</button>
+            <button id="camera-btn" class="btn" type="button">Take a photo</button>
+          </div>
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden />
+          <input id="camera-input" type="file" accept="image/*" capture="environment" hidden />
+        </div>
+      </section>
+
+      <section id="workspace" class="workspace" aria-label="Recognition" hidden>
+        <div class="panel preview-panel">
+          <div class="preview-wrap" id="preview-wrap">
+            <img id="preview-img" alt="Your uploaded photo" />
+            <div id="box-layer" class="box-layer"></div>
+          </div>
+          <p id="box-hint" class="muted small" hidden>Several vehicles were found – click a box to identify a different one.</p>
+          <div class="preview-actions">
+            <button id="another-btn" class="btn" type="button">Upload another image</button>
+            <button id="remove-btn" class="btn ghost" type="button">Remove image</button>
+          </div>
+          <dl id="image-info" class="info-grid"></dl>
+        </div>
+
+        <div class="panel result-panel" aria-live="polite" aria-busy="false" id="result-panel">
+          <div id="progress" class="progress" hidden>
+            <p id="progress-label" class="progress-label">Working…</p>
+            <progress id="progress-bar" max="100"></progress>
+            <p id="progress-detail" class="muted small"></p>
+          </div>
+          <div id="results" hidden></div>
+        </div>
+      </section>
+
+      <section class="grid-2" aria-label="Supported vehicles and privacy">
+        <div class="panel">
+          <h2>What it can recognise</h2>
+          <p class="muted">
+            Two specialised models run side by side: one trained on 27 popular Iranian-market models and one on 196 international
+            makes &amp; models.
+          </p>
+          <h3>Iranian-market examples</h3>
+          <ul class="chips" id="chips-iran"></ul>
+          <h3>International examples</h3>
+          <ul class="chips" id="chips-intl"></ul>
+          <p class="muted small">
+            The international model was trained on cars from roughly 1991–2012 (Stanford Cars). Newer cars may be identified as a
+            similar older model or reported as “uncertain”.
+          </p>
+        </div>
+        <div class="panel privacy">
+          <h2>Privacy</h2>
+          <p><strong>Your images never leave your device.</strong> All image recognition is performed locally in your browser.</p>
+          <ul class="checks">
+            <li>No server, no account, no tracking.</li>
+            <li>Images are not stored and not sent anywhere.</li>
+            <li>The AI models are downloaded once and cached by your browser.</li>
+          </ul>
+          <p id="env-info" class="muted small"></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>
+          Models: YOLOX-tiny detector (Apache-2.0, Megvii) · ResNet18 Iranian car classifier (MIT,
+          <a href="https://github.com/RezaGooner/Multi-Task-Iranian-Vehicle-Monitoring-System" rel="noopener">RezaGooner</a>) · ViT-B/16
+          Stanford Cars classifier (Apache-2.0,
+          <a href="https://huggingface.co/therealcyberlord/stanford-car-vit-patch16" rel="noopener">therealcyberlord</a>) · ONNX Runtime Web (MIT).
+        </p>
+        <p class="muted small">Predictions are statistical estimates and can be wrong. Never rely on them for anything important.</p>
+      </div>
+    </footer>
+  </body>
+</html>

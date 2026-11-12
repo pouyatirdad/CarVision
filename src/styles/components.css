@@ -1,0 +1,32 @@
+/* Component-level extras that don't belong in main.css */
+.model-dl {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.model-dl:first-child {
+  margin-top: 0;
+}
+
+.model-dl .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+
+.uncertain-title {
+  font-size: 1.35rem;
+  margin: 0 0 6px;
+}
+
+.link-btn {
+  font: inherit;
+  background: none;
+  border: 0;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
