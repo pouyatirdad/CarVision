@@ -10,10 +10,16 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test \"tests/*.test.js\"",
-    "labels": "node scripts/build-labels.mjs"
+    "labels": "node scripts/build-labels.mjs",
+    "copy-ocr": "node scripts/copy-ocr.mjs",
+    "predev": "npm run copy-ocr",
+    "prebuild": "npm run copy-ocr"
   },
   "dependencies": {
-    "onnxruntime-web": "^1.31.1"
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/fas": "^1.0.0",
+    "onnxruntime-web": "^1.31.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "vite": "^8.3.8"

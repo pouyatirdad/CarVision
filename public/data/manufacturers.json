@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "manufacturers": [
+    { "name": "Lamari", "aliases": ["LAMARI", "لاماری"], "country": "China" },
+    { "name": "Iran Khodro", "aliases": ["IKCO", "IRAN KHODRO", "ایران خودرو"], "country": "Iran" },
+    { "name": "Saipa", "aliases": ["SAIPA", "سایپا"], "country": "Iran" },
+    { "name": "Peugeot", "aliases": ["PEUGEOT", "پژو"], "country": "France" },
+    { "name": "MVM", "aliases": ["MVM", "ام وی ام"], "country": "China" },
+    { "name": "Fownix", "aliases": ["FOWNIX", "فونیکس"], "country": "China" },
+    { "name": "KMC", "aliases": ["KMC", "کی ام سی"], "country": "China" },
+    { "name": "Fidelity", "aliases": ["FIDELITY", "فیدلیتی"], "country": "China" },
+    { "name": "Dignity", "aliases": ["DIGNITY", "دیگنیتی"], "country": "China" },
+    { "name": "Toyota", "aliases": ["TOYOTA", "تویوتا"], "country": "Japan" },
+    { "name": "Hyundai", "aliases": ["HYUNDAI", "هیوندای"], "country": "South Korea" },
+    { "name": "Kia", "aliases": ["KIA", "کیا"], "country": "South Korea" },
+    { "name": "BMW", "aliases": ["BMW", "بی ام و"], "country": "Germany" },
+    { "name": "Mercedes-Benz", "aliases": ["MERCEDES BENZ", "MERCEDES", "BENZ", "مرسدس بنز"], "country": "Germany" }
+  ]
+}

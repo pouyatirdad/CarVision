@@ -37,3 +37,11 @@ decoding, NMS, softmax/top-k, file validation) – all pass.
 * Results panel rendered nested arrays / the text "null" (DOM helper bugs).
 * Upload errors were invisible while an image was already open.
 * Iranian acceptance threshold too permissive for foreign cars (0.65 → 0.80, see docs/RESEARCH.md).
+
+## OCR + vehicle database (added later)
+
+- `npm test`: 42 tests (25 for the matcher incl. the 10 required scenarios, 5 for OCR/classifier comparison).
+- Browser: synthetic badge text (Latin, 22–70 px) -> tesseract.js -> database: TOYOTA COROLLA 1.8, LAMARI NEO 1.5, PEUGEOT 206, SAIPA SHAHIN, MERCEDES C200, DENA+, TOYOTA COROLLA @22px, LAMARI NEO @22px all identified correctly (≈150–750 ms each after warm-up).
+- Persian text (دنا پلاس, پژو 206, لاماری نئو, سمند), drawn with Tahoma: not recognised (only the digits of "پژو 206"), with either the combined or a Persian-only pass.
+- Real photos (960 px Commons/Stanford images): essentially no usable badge words; low-confidence noise is filtered. A real dealer plate frame ("toyota.com") was read.
+- Full UI path verified: photo + synthetic "IKCO TARA" strip -> classifier "Iran Khodro Tara" -> OCR panel "matches database ... agrees with the image models".

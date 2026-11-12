@@ -1,7 +1,7 @@
 import { formatMs, formatPercent } from '../utils/formatting.js';
 
 /** Tiny DOM helper: h('div', {class:'x'}, 'text', child, ...) - always uses textContent, never innerHTML. */
-function h(tag, attrs = {}, ...children) {
+export function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (v == null || v === false) continue;
@@ -17,7 +17,7 @@ function h(tag, attrs = {}, ...children) {
 }
 
 /** append() that skips null/false (append(null) would insert the text "null"). */
-function put(parent, ...nodes) {
+export function put(parent, ...nodes) {
   parent.append(...nodes.flat(Infinity).filter((n) => n != null && n !== false));
 }
 

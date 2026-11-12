@@ -2,7 +2,8 @@
  *
  * - Navigations (index.html): network-first, fall back to the cached copy -> new deployments show up
  *   immediately when online, and the app still opens when offline.
- * - Same-origin static assets (hashed JS/CSS/WASM, labels): cache-first, filled lazily.
+ * - /data/ and /labels/ (editable JSON): network-first too, so edits show up immediately; cached copy when offline.
+ * - Other same-origin static assets (hashed JS/CSS/WASM): cache-first, filled lazily.
  * - The ONNX models are NOT handled here: the app stores them itself in the Cache API
  *   ("carvision-models-v1") with download progress and integrity checks.
  * Nothing about user images ever passes through here (they never leave the page / worker).
@@ -29,7 +30,8 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes('/models/')) return; // handled by the app's own model cache
 
-  if (req.mode === 'navigate') {
+  const networkFirst = req.mode === 'navigate' || url.pathname.includes('/data/') || url.pathname.includes('/labels/');
+  if (networkFirst) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE);
@@ -38,7 +40,9 @@ self.addEventListener('fetch', (event) => {
           if (fresh.ok) cache.put(req, fresh.clone());
           return fresh;
         } catch {
-          return (await cache.match(req, { ignoreSearch: true })) || (await cache.match(self.registration.scope)) || Response.error();
+          const hit = await cache.match(req, { ignoreSearch: true });
+          if (hit || req.mode !== 'navigate') return hit || Response.error();
+          return (await cache.match(self.registration.scope)) || Response.error();
         }
       })(),
     );

@@ -72,3 +72,14 @@ export const DETECTION = {
   vehicleClasses: { 2: 'car', 5: 'bus', 7: 'truck' },
   maxVehicles: 6,
 };
+
+// Self-hosted OCR (tesseract.js). Files are copied to public/ocr/ by scripts/copy-ocr.mjs - no CDN is used.
+export const OCR = {
+  baseUrl: `${BASE}ocr/`,
+  languages: ['eng', 'fas'],
+  minWordConfidence: 0.6, // tesseract word confidence (0-1) below this is dropped
+  minWordLength: 2, // single characters are almost always noise
+  maxUpscale: 2,
+  maxSide: 1800, // longest side of the crop sent to OCR (px); badges are small, so keep resolution high
+  storageKey: 'carvision-ocr', // localStorage flag: '0' = OCR disabled by the user
+};

@@ -3,10 +3,11 @@ import './styles/components.css';
 import './styles/responsive.css';
 
 import { RecognitionClient } from './ai/recognition-client.js';
-import { LABEL_BASE_URL } from './config.js';
+import { LABEL_BASE_URL, OCR } from './config.js';
 import { loadImage, releaseImage } from './image/image-loader.js';
 import { Progress } from './ui/progress.js';
-import { renderError, renderResult } from './ui/results.js';
+import { renderOcr } from './ui/ocr-panel.js';
+import { describe, renderError, renderResult } from './ui/results.js';
 import { initTheme } from './ui/theme.js';
 import { initUpload } from './ui/upload.js';
 import { formatBytes } from './utils/formatting.js';
@@ -30,6 +31,9 @@ const els = {
   resultPanel: $('result-panel'),
   results: $('results'),
   envInfo: $('env-info'),
+  ocrSection: $('ocr-section'),
+  ocrBody: $('ocr-body'),
+  ocrToggle: $('ocr-toggle'),
 };
 
 initTheme($('theme-toggle'));
@@ -102,6 +106,53 @@ function scheduleIdleRelease() {
   idleTimer = setTimeout(() => client.releaseModels().catch(() => {}), IDLE_RELEASE_MS);
 }
 
+// ---------- OCR (badge text) ----------
+function ocrEnabled() {
+  try {
+    return localStorage.getItem(OCR.storageKey) !== '0';
+  } catch {
+    return true;
+  }
+}
+els.ocrToggle.checked = ocrEnabled();
+els.ocrToggle.addEventListener('change', () => {
+  try {
+    localStorage.setItem(OCR.storageKey, els.ocrToggle.checked ? '1' : '0');
+  } catch {
+    /* storage blocked: the choice just won't persist */
+  }
+  if (els.ocrToggle.checked && lastResult) runOcr(lastResult, runToken);
+  else els.ocrSection.hidden = true;
+});
+
+/** Read text on the selected vehicle and match it against the local JSON vehicle database. Never blocks classification. */
+async function runOcr(result, token) {
+  els.ocrSection.hidden = true;
+  if (!ocrEnabled() || result.status !== 'ok' || !current) return;
+  const alive = () => token === runToken && current;
+  renderOcr(els.ocrBody, { phase: 'loading', label: 'Preparing text recognition…' });
+  els.ocrSection.hidden = false;
+  try {
+    const [{ readText }, { loadVehicleDatabase }, { compareEvidence }] = await Promise.all([
+      import('./ai/ocr-engine.js'),
+      import('./ai/vehicle-database.js'),
+      import('./ai/ocr-evidence.js'),
+    ]);
+    const db = await loadVehicleDatabase();
+    const { words } = await readText(current.bitmap, result.box, (m) => {
+      if (alive()) renderOcr(els.ocrBody, { phase: 'loading', label: `Reading text: ${m.status}…`, progress: typeof m.progress === 'number' ? m.progress : null });
+    });
+    if (!alive()) return;
+    const match = db.match(words);
+    const title = result.primary ? describe(result.primary).title : null;
+    renderOcr(els.ocrBody, { phase: 'done', words, match, evidence: compareEvidence(db, match, title) });
+  } catch (err) {
+    if (!alive()) return;
+    console.error('[CarVision] OCR failed', err);
+    renderOcr(els.ocrBody, { phase: 'error', message: 'Text recognition is not available right now (' + (err?.message || 'unknown error') + '). The image recognition result above is unaffected.' });
+  }
+}
+
 // ---------- recognition ----------
 async function run(options = {}) {
   if (!current) return;
@@ -109,6 +160,7 @@ async function run(options = {}) {
   clearTimeout(idleTimer);
   els.resultPanel.setAttribute('aria-busy', 'true');
   els.results.hidden = true;
+  els.ocrSection.hidden = true;
   progress.show('Preparing…');
   try {
     const result = await client.recognize(options, (e) => token === runToken && progress.handle(e));
@@ -118,6 +170,7 @@ async function run(options = {}) {
     renderResult(els.results, result, { onWholeImage: () => run({ wholeImage: true, detections: result.detections }) });
     drawBoxes(result);
     renderInfo(current.info, result);
+    runOcr(result, token); // not awaited: OCR never delays the classification result
   } catch (err) {
     if (token !== runToken) return;
     console.error('[CarVision] recognition failed', err);
@@ -140,6 +193,7 @@ function clearImage() {
   els.previewImg.removeAttribute('src');
   els.boxLayer.replaceChildren();
   els.results.replaceChildren();
+  els.ocrSection.hidden = true;
   progress.hide();
   els.workspace.hidden = true;
   els.uploadSection.hidden = false;
@@ -196,6 +250,7 @@ if (import.meta.env.DEV) {
 
 window.addEventListener('pagehide', () => {
   client.releaseModels().catch(() => {});
+  import('./ai/ocr-engine.js').then((m) => m.releaseOcr()).catch(() => {});
 });
 
 // ---------- static content ----------

@@ -31,7 +31,7 @@ recognition, routing between the two classifiers – runs **locally in the brows
 
 HTML5 · CSS3 · vanilla JavaScript (ES modules) · [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) 1.31
 (WebGPU → WASM) · Canvas / OffscreenCanvas · Web Worker · Vite (build only) · GitHub Actions + GitHub Pages.
-No framework, no Node/ASP.NET/Python at runtime, no external AI API. Python is used **only offline** to convert
+No framework, no Node/ASP.NET/Python at runtime, no external AI API. Text recognition uses tesseract.js (self-hosted WASM). Python is used **only offline** to convert
 weights to ONNX (`scripts/`).
 
 ## Models (what is actually implemented)
@@ -57,6 +57,20 @@ on its own split, which I could not reproduce. Full research report: [docs/RESEA
 **Not available / not implemented:** a model that knows cars newer than ~2012, Kia / Renault / Peugeot as
 *international* makes (they are not Stanford Cars classes; Iranian-built Peugeots/Renaults/Kia Rio are covered by the
 Iranian model), model-year or trim recognition. The Stanford "year" in a label is shown only as a *reference class year*.
+
+### Text on the car (OCR) and the local vehicle database
+
+After the image result is shown, the app reads text on the selected vehicle with self-hosted
+[tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0; English + Persian `best_int` language data, ≈7 MB, downloaded on first use,
+no CDN) and matches the words against `public/data/vehicles.json` (a plain JSON file you can edit without touching code – see
+[public/data/README.md](public/data/README.md)). A vehicle is only "identified" from text when there is model evidence
+(a full alias or brand + model); a brand alone or an engine label (1.5, 2.0…) never names a model. The text result is shown next
+to the image models' answer (agrees / differs) and never changes it. It can be switched off with the checkbox under the result.
+
+Measured behaviour (own checks, not a benchmark): clean Latin badge text rendered on an image (TOYOTA COROLLA 1.8, LAMARI NEO 1.5,
+PEUGEOT 206, SAIPA SHAHIN, MERCEDES C200, DENA+) was read and matched to the right database vehicle in all cases. On the real
+960 px photos in my test set the engine found almost no usable badge text (mostly noise, which is filtered by confidence), and
+**Persian text was not recognised reliably** with the available language data. Treat OCR as a bonus clue for close-up photos.
 
 ### How the two classifiers are combined
 

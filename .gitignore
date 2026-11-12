@@ -4,3 +4,4 @@ dist/
 .vite/
 tests/fixtures/
 .claude/
+public/ocr/
