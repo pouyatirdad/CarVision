@@ -1,24 +1,138 @@
-@media (max-width: 860px) {
-  .workspace {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* ---------- Fluid base: safe areas, touch behaviour ---------- */
+html {
+  scroll-padding-top: 72px;
+}
 
-  .grid-2 {
-    grid-template-columns: minmax(0, 1fr);
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  -webkit-tap-highlight-color: transparent;
+  overflow-wrap: break-word;
+}
+
+.site-footer {
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+/* Sticky, translucent header so theme toggle / brand are always reachable */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: calc(10px + env(safe-area-inset-top)) 0 10px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.btn,
+.icon-btn,
+.link-btn,
+.toggle {
+  touch-action: manipulation;
+}
+
+.toggle {
+  flex-wrap: wrap;
+  min-height: 44px;
+}
+
+/* Wide screens: bigger container, preview stays visible while reading results */
+@media (min-width: 861px) {
+  .preview-panel {
+    position: sticky;
+    top: 76px;
+    align-self: start;
   }
 }
 
-@media (max-width: 480px) {
+@media (min-width: 1400px) {
+  .container {
+    width: min(1240px, 100% - 64px);
+  }
+}
+
+/* ---------- Tablet ---------- */
+@media (max-width: 860px) {
+  .workspace,
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview-wrap img {
+    max-height: 55vh;
+  }
+
+  .hero {
+    padding: 16px 0 18px;
+  }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 600px) {
+  .container {
+    width: calc(100% - 28px);
+  }
+
+  .lead {
+    font-size: 1rem;
+  }
+
   .panel {
-    padding: 14px;
+    padding: 16px;
+    border-radius: 14px;
   }
 
   .dropzone {
-    padding: 24px 12px;
+    padding: 24px 14px;
   }
 
-  .drop-actions .btn {
-    flex: 1 1 100%;
+  .drop-title {
+    font-size: 1.05rem;
+  }
+
+  /* Big, thumb-friendly stacked actions */
+  .drop-actions,
+  .preview-actions {
+    flex-direction: column;
+  }
+
+  .drop-actions .btn,
+  .preview-actions .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  /* On phones the camera is the most natural way in */
+  .drop-actions #camera-btn {
+    order: -1;
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-ink);
+    font-weight: 600;
+  }
+
+  .drop-actions #browse-btn {
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .rear-example {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .rear-example svg {
+    max-width: 220px;
+    margin-inline: auto;
   }
 
   .facts {
@@ -28,5 +142,90 @@
 
   .facts dd {
     margin-bottom: 8px;
+  }
+
+  .conf-row,
+  .model-dl .row {
+    gap: 12px;
+  }
+
+  .info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid-2 {
+    margin: 20px 0 28px;
+    gap: 14px;
+  }
+
+  .chips li {
+    padding: 4px 10px;
+  }
+
+  .site-footer {
+    font-size: 0.8rem;
+  }
+}
+
+/* ---------- Very small phones ---------- */
+@media (max-width: 360px) {
+  h1 {
+    font-size: 1.65rem;
+  }
+
+  .brand {
+    font-size: 1.1rem;
+  }
+}
+
+/* ---------- Short landscape phones ---------- */
+@media (max-height: 480px) and (orientation: landscape) {
+  .site-header {
+    position: static;
+  }
+
+  .preview-panel {
+    position: static;
+  }
+
+  .preview-wrap img {
+    max-height: 70vh;
+  }
+}
+
+/* ---------- Touch devices: hover-only affordances, larger targets ---------- */
+@media (hover: none) and (pointer: coarse) {
+  .dropzone:hover {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+  }
+
+  .vbox {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .toggle input {
+    width: 22px;
+    height: 22px;
+  }
+
+  .link-btn {
+    padding: 8px 0;
+  }
+
+  /* "Drag & drop" is meaningless without a mouse */
+  .dropzone .muted {
+    font-size: 0.82rem;
+  }
+}
+
+/* ---------- Print ---------- */
+@media print {
+  .site-header,
+  .dropzone,
+  .preview-actions,
+  .toggle {
+    display: none;
   }
 }
