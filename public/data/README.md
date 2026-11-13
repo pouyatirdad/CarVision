@@ -10,7 +10,11 @@ requires a code change** – edit the JSON, reload.
 | `vehicles.json` | One record per vehicle (see schema). The database can later be split into several files. |
 | `manufacturers.json` | Optional. Per brand: alternative spellings seen on cars, incl. Persian, and the brand's country. |
 
-> The shipped data is a **starter dataset, not a verified catalogue**. Facts such as engine codes, categories, the
+> **Database coverage is not AI coverage.** A vehicle can be in this database (and be identified from badge text) without the
+> rear-view image model knowing it. `rearRecognition` says which records the image model can actually output.
+>
+> The shipped data is a **starter dataset, not a verified catalogue**. Records added in schema 2.0 cite a `sources` URL
+> (mostly Wikipedia's Iran Khodro / SAIPA / MVM / Bahman pages); older records may not. Facts such as engine codes, categories, the
 > `manufacturer` of rebadged Chinese models, or which records are really sold under which name have not been verified.
 > Never invent `generation`, `yearFrom` or `yearTo`: leave them `null` until you have a source.
 
@@ -18,7 +22,7 @@ requires a code change** – edit the JSON, reload.
 
 ```json
 {
-  "version": "1.0",
+  "version": "2.0",
   "vehicles": [
     {
       "id": "lamari-neo",
@@ -31,9 +35,12 @@ requires a code change** – edit the JSON, reload.
       "country": "China",
       "market": ["Iran"],
       "category": "SUV",
-      "generation": null,
+      "basedOn": "Kaiyi X3 Pro",
       "yearFrom": null,
-      "yearTo": null
+      "yearTo": null,
+      "generations": [],
+      "sources": ["https://www.zoomit.ir/product/lamari-neo/"],
+      "rearRecognition": { "supported": false, "tested": false, "modelId": null }
     }
   ]
 }
@@ -49,7 +56,12 @@ requires a code change** – edit the JSON, reload.
 | `badgeTexts` | no | Text expected on the car body. Weaker than `aliases` (a badge alone is only a hint). |
 | `engineBadges` | no | Engine labels (`1.5`, `1.6T`, `EF7`). **Supporting evidence only – they never identify a vehicle.** |
 | `country`, `market`, `category` | no | Brand country of origin, markets sold in, body type. |
-| `generation`, `yearFrom`, `yearTo` | no | Only if verified. Years are integers or `null`. |
+| `basedOn` | no | Original model of a rebadged / licence-built vehicle (e.g. Fownix FX → `Chery Omoda 5`). Only if sourced. |
+| `yearFrom`, `yearTo` | no | Only if verified (see `notes` for what the year means, e.g. introduction year). Integers or `null`. |
+| `generations` | no | `[{ "name": "...", "yearFrom": 2019, "yearTo": null }]` – facelifts/generations, only if verified. |
+| `sources` | no | URLs that back the record. |
+| `notes` | no | Free text (caveats, what a year means). |
+| `rearRecognition` | no | `{ supported, tested, modelId, kind?, testImages?, testTop1? }` – **written by `scripts/sync-rear-coverage.mjs`** from the trained rear-view head; do not edit by hand. `supported`: the image model can output this vehicle. `tested`: it was evaluated on held-out rear photos. `kind`: `trained` (trained on rear photos) or `zero-shot` (text-prompt class, no training photos). |
 
 Unknown values: use `null` (or omit the field). The loader validates the file (unique ids, types, `yearFrom <= yearTo`)
 and refuses to load a broken database with a readable list of problems.

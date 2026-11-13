@@ -45,3 +45,45 @@ decoding, NMS, softmax/top-k, file validation) – all pass.
 - Persian text (دنا پلاس, پژو 206, لاماری نئو, سمند), drawn with Tahoma: not recognised (only the digits of "پژو 206"), with either the combined or a Persian-only pass.
 - Real photos (960 px Commons/Stanford images): essentially no usable badge words; low-confidence noise is filtered. A real dealer plate frame ("toyota.com") was read.
 - Full UI path verified: photo + synthetic "IKCO TARA" strip -> classifier "Iran Khodro Tara" -> OCR panel "matches database ... agrees with the image models".
+
+## Rear-view V2 (2026-11-13)
+
+Measured model results (accuracy, viewpoint check, unknown-vehicle rejection, baseline comparison) are in
+[REAR-VIEW.md §5](REAR-VIEW.md). This section covers the app itself.
+
+- `npm test`: 59 tests – fusion decision table (10), rear head (5, incl. open-set prototypes), OCR pass planning/merging
+  and pixel operations (7), database schema 2.0 + matcher, router, post-processing, validation. `npm run build` passes.
+- **Browser (Chromium, Vite dev server, in-app browser pane):**
+  - Rear Samand photo (Commons, CC BY-SA): rear check passed (0.36 ≥ 0.2), **Iran Khodro Samand 97 %**, prototype
+    similarity 0.85 ≥ 0.80 → "Identified". Not part of SIVD; it *is* part of the Commons set the final head was trained
+    on, so this verifies the pipeline, not accuracy.
+  - Front Kia/Saipa Pride photo: rear check 2 % → "Please upload a photograph of the rear of the vehicle." The override
+    button re-runs it; the head says Pride 99 % but the prototype similarity rejects it (front ≠ any rear prototype) →
+    "Uncertain – may be a vehicle the model does not know". Correct behaviour for a non-rear photo.
+  - Rear Toyota Corolla photo: Toyota Corolla 99 %, identified (rear appearance only).
+  - Warm timings on this laptop (CPU busy with training jobs at the same time): detection ≈ 0.1 s, rear-view encoder
+    ≈ 0.6–0.7 s (WASM), first use ≈ 2 s + download (98 MB, once).
+  - Backends: detector WebGPU, rear encoder WASM (WebGPU MatMulNBits supports only 2/4-bit – verified error message).
+- **Bugs found and fixed while testing:**
+  - Overlapping runs on one ORT-Web session ("Session already started") when a new photo is uploaded while the previous
+    one is still being processed → runs are now queued per session.
+  - Replacing model weights under the same file name kept serving the **old bytes from the Cache API** (the browser
+    gave a meaningless answer with prototype similarity 0.06) → model files are now versioned
+    (`rear-encoder-dc-b32-v1.onnx`) and cache entries of files no longer in `MODELS` are deleted.
+  - Training-data subset bug (stride + truncation dropped the alphabetically last classes Tiba/Xantia) → fixed before
+    the reported numbers.
+- **Not tested:** Firefox, Safari, real mobile devices, GitHub Pages deployment of V2 (the sub-path build is unchanged
+  in mechanism), offline mode with the new model.
+- **OCR on rear badges (synthetic, in the browser).** Dark badge text on a light plate drawn into a real 773 px rear
+  photo at x≈62 %, y≈58 % (the rear-right badge zone), 10 cases (4 names × 10/14/20 px), matched against the database:
+  **single original pass identified 4 / 10, the multi-pass reader 8 / 10** (LAMARI NEO 10/14/20 px, DENA PLUS 10/14,
+  HYUNDAI TUCSON 10, TIGGO 8 PRO 10/20; missed: TIGGO 8 PRO 14 px – plate noise words got between "TIGGO" and "8" –
+  and HYUNDAI TUCSON 14 px, read as "TUC!"). The TIGGO and Tucson-14 cases were re-run after the two fixes below; the
+  others are from the run just before the reading-order fix. Light outlined letters directly on paint were not read at
+  any size or pass. Time: ≈1.5 s for one pass, ≈14 s for all 10 passes in a background tab (the app shows the image
+  result first and stops OCR early once text and image agree).
+  - Fixed: single digits were dropped as noise, so "TIGGO 8", "MAZDA 3", "ARRIZO 6" could never match.
+  - Fixed: merged words were sorted by confidence ("8 PRO TIGGO"), breaking multi-word names; they now keep reading
+    order.
+  - Real Commons rear photo (Corolla, 800 px): 10 attempts, no database name found (badge too small) – recognition
+    came from the rear appearance only, as intended.

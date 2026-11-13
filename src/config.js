@@ -21,6 +21,22 @@ export const LIMITS = {
 };
 
 export const MODELS = {
+  // Primary model: CLIP image encoder + rear-view head (public/labels/rear-head.json). See docs/REAR-VIEW.md.
+  rear: {
+    key: 'rear',
+    // The file name carries the model version: the Cache API is keyed by URL, so replacing weights under the same name
+    // would keep serving the old bytes to returning visitors.
+    file: 'rear-encoder-dc-b32-v1.onnx',
+    head: 'rear-head.json',
+    title: 'CLIP ViT-B/32 rear-view recogniser (8-bit weights)',
+    license: 'MIT (OpenCLIP ViT-B-32 datacomp_xl_s13b_b90k); head trained offline, see docs/REAR-VIEW.md',
+    approxBytes: 98_211_387,
+    inputSize: 224,
+    fit: 'pad', // keep the whole rear (both tail lights) instead of a centre crop
+    // Weight-only 8-bit MatMulNBits: ORT-Web's WebGPU kernel only supports 2/4-bit ("Only 2b and 4b quantization is
+    // supported", verified in Chromium) and 4-bit is too lossy for this encoder (docs/REAR-VIEW.md), so WASM only.
+    providers: ['wasm'],
+  },
   detector: {
     key: 'detector',
     file: 'vehicle-detector.onnx',
@@ -64,6 +80,16 @@ export const ROUTING = {
   lowConfidenceWarn: 0.5, // accepted results below this still get a visible warning
 };
 
+// Rear-view recognition (see docs/REAR-VIEW.md for how these were measured).
+export const REAR = {
+  // P(rear) + P(rear three-quarter) from the zero-shot viewpoint check; below => "please upload a rear photo".
+  // Measured with the DataComp encoder (docs/REAR-VIEW.md §5.2): at 0.2, 97.9 % of 438 rear Commons photos pass,
+  // 0 / 141 front photos, 1.3 % of front-three-quarter and 10 % of side photos (mostly pickups) pass.
+  viewpointMin: 0.2,
+  visualAccept: 0.6, // rear-view model probability at/above this (and open-set check passed) => identified
+  visualLikely: 0.35, // between visualLikely and visualAccept => "likely", shown with a visible warning
+};
+
 export const DETECTION = {
   scoreThreshold: 0.35,
   nmsIou: 0.45,
@@ -81,5 +107,9 @@ export const OCR = {
   minWordLength: 2, // single characters are almost always noise
   maxUpscale: 2,
   maxSide: 1800, // longest side of the crop sent to OCR (px); badges are small, so keep resolution high
+  zoneUpscale: 3, // rear badge zones (left / centre / right of the trunk lid) are enlarged up to 3x
+  maxPasses: 10, // upper bound on OCR attempts per photo (3 whole-vehicle variants + 3 zones + up to 4 word zooms)
+  refineMinConfidence: 0.3, // words between this and minWordConfidence are re-read from an upscaled crop
+  maxRefineRegions: 4,
   storageKey: 'carvision-ocr', // localStorage flag: '0' = OCR disabled by the user
 };

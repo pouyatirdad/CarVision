@@ -1,0 +1,759 @@
+{
+ "model": {
+  "arch": "ViT-B-32",
+  "pretrained": "datacomp_xl_s13b_b90k"
+ },
+ "lambda": 0.001,
+ "viewpointMin": 0.2,
+ "viewpoint_share": {
+  "206": {
+   "train": 527,
+   "train_rear": 466,
+   "test": 388,
+   "test_rear": 356
+  },
+  "207i": {
+   "train": 94,
+   "train_rear": 87,
+   "test": 74,
+   "test_rear": 73
+  },
+  "405": {
+   "train": 374,
+   "train_rear": 351,
+   "test": 240,
+   "test_rear": 229
+  },
+  "Arisun": {
+   "train": 61,
+   "train_rear": 56,
+   "test": 34,
+   "test_rear": 33
+  },
+  "Dena": {
+   "train": 223,
+   "train_rear": 211,
+   "test": 170,
+   "test_rear": 167
+  },
+  "HcCross": {
+   "train": 88,
+   "train_rear": 87,
+   "test": 65,
+   "test_rear": 62
+  },
+  "JackS5": {
+   "train": 87,
+   "train_rear": 79,
+   "test": 55,
+   "test_rear": 54
+  },
+  "KaraMazdaPickup": {
+   "train": 179,
+   "train_rear": 175,
+   "test": 128,
+   "test_rear": 128
+  },
+  "L90": {
+   "train": 70,
+   "train_rear": 66,
+   "test": 55,
+   "test_rear": 52
+  },
+  "MVM315H": {
+   "train": 122,
+   "train_rear": 106,
+   "test": 91,
+   "test_rear": 81
+  },
+  "MVMX22": {
+   "train": 58,
+   "train_rear": 49,
+   "test": 47,
+   "test_rear": 43
+  },
+  "NeissanVanet": {
+   "train": 78,
+   "train_rear": 75,
+   "test": 61,
+   "test_rear": 61
+  },
+  "Pars": {
+   "train": 298,
+   "train_rear": 282,
+   "test": 211,
+   "test_rear": 205
+  },
+  "PeykanSavari": {
+   "train": 114,
+   "train_rear": 107,
+   "test": 83,
+   "test_rear": 78
+  },
+  "PeykanVanet": {
+   "train": 117,
+   "train_rear": 107,
+   "test": 96,
+   "test_rear": 89
+  },
+  "Pride131nasimsaba": {
+   "train": 311,
+   "train_rear": 279,
+   "test": 217,
+   "test_rear": 205
+  },
+  "Pride132and111": {
+   "train": 212,
+   "train_rear": 197,
+   "test": 149,
+   "test_rear": 144
+  },
+  "Pride141": {
+   "train": 130,
+   "train_rear": 121,
+   "test": 87,
+   "test_rear": 80
+  },
+  "PrideVanet151": {
+   "train": 72,
+   "train_rear": 69,
+   "test": 56,
+   "test_rear": 55
+  },
+  "Quik": {
+   "train": 72,
+   "train_rear": 56,
+   "test": 49,
+   "test_rear": 47
+  },
+  "RenaultPK": {
+   "train": 79,
+   "train_rear": 66,
+   "test": 71,
+   "test_rear": 68
+  },
+  "RioSD": {
+   "train": 82,
+   "train_rear": 78,
+   "test": 65,
+   "test_rear": 59
+  },
+  "Runna": {
+   "train": 89,
+   "train_rear": 83,
+   "test": 60,
+   "test_rear": 58
+  },
+  "Saina": {
+   "train": 85,
+   "train_rear": 78,
+   "test": 72,
+   "test_rear": 64
+  },
+  "Samand": {
+   "train": 377,
+   "train_rear": 355,
+   "test": 226,
+   "test_rear": 219
+  },
+  "SamandSoren": {
+   "train": 105,
+   "train_rear": 99,
+   "test": 69,
+   "test_rear": 69
+  },
+  "Shahin": {
+   "train": 236,
+   "train_rear": 103,
+   "test": 28,
+   "test_rear": 27
+  },
+  "Tiba": {
+   "train": 1223,
+   "train_rear": 514,
+   "test": 159,
+   "test_rear": 141
+  },
+  "Xantia": {
+   "train": 906,
+   "train_rear": 389,
+   "test": 92,
+   "test_rear": 89
+  }
+ },
+ "leakage": {
+  "test_rear_before": 3036,
+  "near_duplicates_removed": 31
+ },
+ "extra_viewpoint_rear_accepted": 97.94520547945206,
+ "extra_groups": 120,
+ "zero_shot_test": {
+  "top1": 38.30282861896839,
+  "top3": 62.595673876871885,
+  "n": 3005
+ },
+ "main_test": {
+  "top1": 87.92013311148087,
+  "top3": 97.3044925124792,
+  "n": 3005,
+  "temperature": 0.6289293513109148,
+  "top1_vehicle": 88.85191347753744
+ },
+ "main_confidence_coverage": {
+  "0.35": {
+   "accepted": 98.4026622296173,
+   "accuracy_of_accepted": 88.87385864051403
+  },
+  "0.5": {
+   "accepted": 93.5440931780366,
+   "accuracy_of_accepted": 91.71113482746354
+  },
+  "0.6": {
+   "accepted": 88.05324459234609,
+   "accuracy_of_accepted": 94.10430839002267
+  },
+  "0.7": {
+   "accepted": 82.1630615640599,
+   "accuracy_of_accepted": 95.787768327258
+  },
+  "0.8": {
+   "accepted": 75.24126455906823,
+   "accuracy_of_accepted": 96.85979655019904
+  },
+  "0.9": {
+   "accepted": 63.36106489184692,
+   "accuracy_of_accepted": 98.26680672268907
+  }
+ },
+ "per_class": {
+  "206": {
+   "n_test": 353,
+   "n_train": 486,
+   "precision": 96.71641791044776,
+   "recall": 91.78470254957507
+  },
+  "207i": {
+   "n_test": 73,
+   "n_train": 109,
+   "precision": 81.48148148148148,
+   "recall": 90.41095890410958
+  },
+  "405": {
+   "n_test": 229,
+   "n_train": 358,
+   "precision": 85.95744680851064,
+   "recall": 88.20960698689956
+  },
+  "Pars": {
+   "n_test": 205,
+   "n_train": 282,
+   "precision": 87.3015873015873,
+   "recall": 80.48780487804879
+  },
+  "Arisun": {
+   "n_test": 33,
+   "n_train": 56,
+   "precision": 64.86486486486487,
+   "recall": 72.72727272727273
+  },
+  "Dena": {
+   "n_test": 167,
+   "n_train": 211,
+   "precision": 97.41935483870968,
+   "recall": 90.41916167664671
+  },
+  "Runna": {
+   "n_test": 57,
+   "n_train": 83,
+   "precision": 77.41935483870968,
+   "recall": 84.21052631578947
+  },
+  "Samand": {
+   "n_test": 201,
+   "n_train": 359,
+   "precision": 92.74611398963731,
+   "recall": 89.05472636815921
+  },
+  "SamandSoren": {
+   "n_test": 69,
+   "n_train": 100,
+   "precision": 84.93150684931507,
+   "recall": 89.85507246376811
+  },
+  "PeykanSavari": {
+   "n_test": 78,
+   "n_train": 107,
+   "precision": 95.06172839506173,
+   "recall": 98.71794871794873
+  },
+  "PeykanVanet": {
+   "n_test": 89,
+   "n_train": 107,
+   "precision": 89.04109589041096,
+   "recall": 73.03370786516854
+  },
+  "L90": {
+   "n_test": 50,
+   "n_train": 73,
+   "precision": 95.91836734693877,
+   "recall": 94.0
+  },
+  "Pride131nasimsaba": {
+   "n_test": 205,
+   "n_train": 279,
+   "precision": 85.64356435643565,
+   "recall": 84.39024390243902
+  },
+  "Pride132and111": {
+   "n_test": 142,
+   "n_train": 197,
+   "precision": 85.29411764705883,
+   "recall": 81.69014084507043
+  },
+  "Pride141": {
+   "n_test": 80,
+   "n_train": 121,
+   "precision": 87.5,
+   "recall": 87.5
+  },
+  "PrideVanet151": {
+   "n_test": 55,
+   "n_train": 69,
+   "precision": 78.125,
+   "recall": 90.9090909090909
+  },
+  "Quik": {
+   "n_test": 47,
+   "n_train": 56,
+   "precision": 89.79591836734694,
+   "recall": 93.61702127659575
+  },
+  "Saina": {
+   "n_test": 64,
+   "n_train": 78,
+   "precision": 84.84848484848484,
+   "recall": 87.5
+  },
+  "Shahin": {
+   "n_test": 26,
+   "n_train": 103,
+   "precision": 73.52941176470588,
+   "recall": 96.15384615384616
+  },
+  "Tiba": {
+   "n_test": 138,
+   "n_train": 514,
+   "precision": 86.76470588235294,
+   "recall": 85.5072463768116
+  },
+  "RioSD": {
+   "n_test": 59,
+   "n_train": 78,
+   "precision": 72.05882352941177,
+   "recall": 83.05084745762711
+  },
+  "Xantia": {
+   "n_test": 89,
+   "n_train": 389,
+   "precision": 84.21052631578947,
+   "recall": 89.8876404494382
+  },
+  "RenaultPK": {
+   "n_test": 68,
+   "n_train": 66,
+   "precision": 91.78082191780823,
+   "recall": 98.52941176470588
+  },
+  "HcCross": {
+   "n_test": 62,
+   "n_train": 87,
+   "precision": 94.91525423728814,
+   "recall": 90.32258064516128
+  },
+  "MVM315H": {
+   "n_test": 81,
+   "n_train": 106,
+   "precision": 88.46153846153845,
+   "recall": 85.18518518518519
+  },
+  "MVMX22": {
+   "n_test": 43,
+   "n_train": 49,
+   "precision": 89.13043478260869,
+   "recall": 95.34883720930233
+  },
+  "JackS5": {
+   "n_test": 54,
+   "n_train": 79,
+   "precision": 96.29629629629629,
+   "recall": 96.29629629629629
+  },
+  "KaraMazdaPickup": {
+   "n_test": 127,
+   "n_train": 175,
+   "precision": 90.75630252100841,
+   "recall": 85.03937007874016
+  },
+  "NeissanVanet": {
+   "n_test": 61,
+   "n_train": 75,
+   "precision": 76.31578947368422,
+   "recall": 95.08196721311475
+  },
+  "fownix-fx": {
+   "n_test": 0,
+   "n_train": 2,
+   "precision": null,
+   "recall": null
+  },
+  "fownix-tiggo-7-pro": {
+   "n_test": 0,
+   "n_train": 1,
+   "precision": null,
+   "recall": null
+  },
+  "fownix-tiggo-8-pro": {
+   "n_test": 0,
+   "n_train": 1,
+   "precision": null,
+   "recall": null
+  },
+  "kmc-j7": {
+   "n_test": 0,
+   "n_train": 1,
+   "precision": null,
+   "recall": null
+  },
+  "haval-h6": {
+   "n_test": 0,
+   "n_train": 8,
+   "precision": null,
+   "recall": null
+  },
+  "toyota-corolla": {
+   "n_test": 0,
+   "n_train": 20,
+   "precision": null,
+   "recall": null
+  },
+  "toyota-camry": {
+   "n_test": 0,
+   "n_train": 13,
+   "precision": null,
+   "recall": null
+  },
+  "toyota-rav4": {
+   "n_test": 0,
+   "n_train": 19,
+   "precision": null,
+   "recall": null
+  },
+  "hyundai-tucson": {
+   "n_test": 0,
+   "n_train": 12,
+   "precision": null,
+   "recall": null
+  },
+  "hyundai-elantra": {
+   "n_test": 0,
+   "n_train": 13,
+   "precision": null,
+   "recall": null
+  },
+  "kia-sportage": {
+   "n_test": 0,
+   "n_train": 8,
+   "precision": null,
+   "recall": null
+  },
+  "kia-cerato": {
+   "n_test": 0,
+   "n_train": 6,
+   "precision": 0.0,
+   "recall": null
+  },
+  "bmw-3-series": {
+   "n_test": 0,
+   "n_train": 25,
+   "precision": 0.0,
+   "recall": null
+  },
+  "mercedes-c-class": {
+   "n_test": 0,
+   "n_train": 19,
+   "precision": null,
+   "recall": null
+  },
+  "peugeot-2008": {
+   "n_test": 0,
+   "n_train": 8,
+   "precision": null,
+   "recall": null
+  },
+  "ikco-tara": {
+   "n_test": 0,
+   "n_train": 0,
+   "precision": null,
+   "recall": null
+  },
+  "saipa-atlas": {
+   "n_test": 0,
+   "n_train": 0,
+   "precision": null,
+   "recall": null
+  }
+ },
+ "extra_crossfit": {
+  "sivd-trained": {
+   "n": 104,
+   "top1": 86.53846153846155,
+   "top3": 99.03846153846155,
+   "zero_shot_top1": 77.88461538461539,
+   "zero_shot_top3": 94.23076923076923
+  },
+  "commons-only": {
+   "n": 325,
+   "top1": 82.15384615384616,
+   "top3": 93.53846153846153,
+   "zero_shot_top1": 61.53846153846154,
+   "zero_shot_top3": 75.6923076923077
+  },
+  "all": {
+   "n": 429,
+   "top1": 83.21678321678321,
+   "top3": 94.87179487179486
+  }
+ },
+ "extra_confidence_coverage": {
+  "0.35": {
+   "accepted": 98.83449883449883,
+   "accuracy_of_accepted": 84.19811320754717
+  },
+  "0.5": {
+   "accepted": 94.63869463869464,
+   "accuracy_of_accepted": 86.94581280788178
+  },
+  "0.6": {
+   "accepted": 90.9090909090909,
+   "accuracy_of_accepted": 87.94871794871794
+  },
+  "0.7": {
+   "accepted": 84.84848484848484,
+   "accuracy_of_accepted": 90.38461538461539
+  },
+  "0.8": {
+   "accepted": 78.78787878787878,
+   "accuracy_of_accepted": 92.3076923076923
+  },
+  "0.9": {
+   "accepted": 70.62937062937063,
+   "accuracy_of_accepted": 95.37953795379538
+  }
+ },
+ "extra_per_vehicle": {
+  "bahman-cheval-6": {
+   "n": 16,
+   "top1": 56.25,
+   "top3": 87.5,
+   "kind": "commons-only"
+  },
+  "bmw-3-series": {
+   "n": 40,
+   "top1": 92.5,
+   "top3": 95.0,
+   "kind": "commons-only"
+  },
+  "fownix-fx": {
+   "n": 5,
+   "top1": 0.0,
+   "top3": 60.0,
+   "kind": "commons-only"
+  },
+  "fownix-tiggo-7-pro": {
+   "n": 3,
+   "top1": 33.33333333333333,
+   "top3": 66.66666666666666,
+   "kind": "commons-only"
+  },
+  "fownix-tiggo-8-pro": {
+   "n": 2,
+   "top1": 0.0,
+   "top3": 100.0,
+   "kind": "commons-only"
+  },
+  "hyundai-elantra": {
+   "n": 34,
+   "top1": 88.23529411764706,
+   "top3": 100.0,
+   "kind": "commons-only"
+  },
+  "hyundai-tucson": {
+   "n": 24,
+   "top1": 79.16666666666666,
+   "top3": 91.66666666666666,
+   "kind": "commons-only"
+  },
+  "ikap-peugeot-2008": {
+   "n": 18,
+   "top1": 83.33333333333334,
+   "top3": 94.44444444444444,
+   "kind": "commons-only"
+  },
+  "ikco-dena": {
+   "n": 1,
+   "top1": 100.0,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "ikco-peugeot-206": {
+   "n": 33,
+   "top1": 69.6969696969697,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "ikco-peugeot-207": {
+   "n": 27,
+   "top1": 92.5925925925926,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "ikco-peugeot-405": {
+   "n": 14,
+   "top1": 100.0,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "ikco-samand": {
+   "n": 5,
+   "top1": 100.0,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "ikco-soren": {
+   "n": 1,
+   "top1": 100.0,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "ikco-tara": {
+   "n": 1,
+   "top1": 0.0,
+   "top3": 0.0,
+   "kind": "commons-only"
+  },
+  "kia-cerato": {
+   "n": 17,
+   "top1": 76.47058823529412,
+   "top3": 94.11764705882352,
+   "kind": "commons-only"
+  },
+  "kia-sportage": {
+   "n": 36,
+   "top1": 72.22222222222221,
+   "top3": 83.33333333333334,
+   "kind": "commons-only"
+  },
+  "kmc-j7": {
+   "n": 2,
+   "top1": 0.0,
+   "top3": 50.0,
+   "kind": "commons-only"
+  },
+  "mercedes-c-class": {
+   "n": 24,
+   "top1": 95.83333333333334,
+   "top3": 95.83333333333334,
+   "kind": "commons-only"
+  },
+  "renault-tondar-90": {
+   "n": 13,
+   "top1": 92.3076923076923,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "saipa-pride": {
+   "n": 9,
+   "top1": 88.88888888888889,
+   "top3": 88.88888888888889,
+   "kind": "sivd-trained"
+  },
+  "saipa-shahin": {
+   "n": 1,
+   "top1": 100.0,
+   "top3": 100.0,
+   "kind": "sivd-trained"
+  },
+  "toyota-camry": {
+   "n": 26,
+   "top1": 96.15384615384616,
+   "top3": 96.15384615384616,
+   "kind": "commons-only"
+  },
+  "toyota-corolla": {
+   "n": 39,
+   "top1": 92.3076923076923,
+   "top3": 100.0,
+   "kind": "commons-only"
+  },
+  "toyota-rav4": {
+   "n": 38,
+   "top1": 86.8421052631579,
+   "top3": 100.0,
+   "kind": "commons-only"
+  }
+ },
+ "open_set": {
+  "held_out_classes": [
+   "405",
+   "Arisun",
+   "PeykanVanet",
+   "L90",
+   "Quik",
+   "RioSD",
+   "NeissanVanet"
+  ],
+  "maxprob>=0.5": {
+   "unknown_rejected": 7.042253521126761,
+   "known_accepted": 96.34796881411572
+  },
+  "maxprob>=0.6": {
+   "unknown_rejected": 15.669014084507044,
+   "known_accepted": 93.14731226918343
+  },
+  "maxprob>=0.7": {
+   "unknown_rejected": 25.880281690140844,
+   "known_accepted": 89.00287238407878
+  },
+  "maxprob>=0.8": {
+   "unknown_rejected": 36.971830985915496,
+   "known_accepted": 85.26877308165778
+  },
+  "maxprob>=0.9": {
+   "unknown_rejected": 51.40845070422535,
+   "known_accepted": 78.29298317603612
+  },
+  "prototype_similarity": {
+   "threshold": 0.8068445324897766,
+   "unknown_rejected": 39.08450704225352,
+   "known_accepted": 91.38284776364382
+  },
+  "similarity_and_maxprob>=0.5": {
+   "unknown_rejected": 42.42957746478873,
+   "known_accepted": 89.24907673368895
+  },
+  "similarity_and_maxprob>=0.6": {
+   "unknown_rejected": 46.83098591549296,
+   "known_accepted": 86.62289700451375
+  }
+ },
+ "final_head": {
+  "openSetMinSimilarity": 0.7956408262252808,
+  "temperature": 0.6641952441853759,
+  "train_images": 5211,
+  "classes_by_kind": {
+   "trained": 40,
+   "few-shot": 5,
+   "zero-shot": 1
+  }
+ }
+}

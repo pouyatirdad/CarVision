@@ -1,0 +1,323 @@
+{
+ "arch": "ViT-B-32",
+ "pretrained": "datacomp_xl_s13b_b90k",
+ "modelId": "rear-clip-b32-dc-v1",
+ "train": "<work>/dl/sivd/train_all_dc32.npz",
+ "test": "<work>/dl/sivd/test_rear_dc32.npz",
+ "classes": {
+  "206": {
+   "vehicleId": "ikco-peugeot-206",
+   "names": [
+    "Peugeot 206"
+   ]
+  },
+  "207i": {
+   "vehicleId": "ikco-peugeot-207",
+   "names": [
+    "Peugeot 207",
+    "Peugeot 207i"
+   ]
+  },
+  "405": {
+   "vehicleId": "ikco-peugeot-405",
+   "names": [
+    "Peugeot 405"
+   ]
+  },
+  "Pars": {
+   "vehicleId": "ikco-peugeot-pars",
+   "names": [
+    "Peugeot Pars",
+    "Peugeot Persia"
+   ]
+  },
+  "Arisun": {
+   "vehicleId": "ikco-arisun",
+   "names": [
+    "Iran Khodro Arisun pickup",
+    "IKCO Arisun"
+   ]
+  },
+  "Dena": {
+   "vehicleId": "ikco-dena",
+   "names": [
+    "Iran Khodro Dena",
+    "IKCO Dena"
+   ]
+  },
+  "Runna": {
+   "vehicleId": "ikco-runna",
+   "names": [
+    "Iran Khodro Runna",
+    "IKCO Runna"
+   ]
+  },
+  "Samand": {
+   "vehicleId": "ikco-samand",
+   "names": [
+    "Iran Khodro Samand",
+    "IKCO Samand"
+   ]
+  },
+  "SamandSoren": {
+   "vehicleId": "ikco-soren",
+   "names": [
+    "Iran Khodro Soren",
+    "Samand Soren"
+   ]
+  },
+  "PeykanSavari": {
+   "vehicleId": "ikco-paykan",
+   "names": [
+    "Paykan",
+    "Iran Khodro Paykan",
+    "Hillman Hunter"
+   ]
+  },
+  "PeykanVanet": {
+   "vehicleId": "ikco-paykan-pickup",
+   "names": [
+    "Paykan pickup",
+    "Iran Khodro Paykan pickup"
+   ]
+  },
+  "L90": {
+   "vehicleId": "renault-tondar-90",
+   "names": [
+    "Renault Tondar 90",
+    "Renault Logan",
+    "Dacia Logan"
+   ]
+  },
+  "Pride131nasimsaba": {
+   "vehicleId": "saipa-pride",
+   "variant": "Pride 131 / Nasim / Saba (sedan)",
+   "names": [
+    "Saipa Pride 131 sedan",
+    "Kia Pride sedan"
+   ]
+  },
+  "Pride132and111": {
+   "vehicleId": "saipa-pride",
+   "variant": "Pride 111 / 132 (hatchback)",
+   "names": [
+    "Saipa Pride 111 hatchback",
+    "Kia Pride hatchback"
+   ]
+  },
+  "Pride141": {
+   "vehicleId": "saipa-pride",
+   "variant": "Pride 141 (hatchback)",
+   "names": [
+    "Saipa 141",
+    "Saipa Pride 141"
+   ]
+  },
+  "PrideVanet151": {
+   "vehicleId": "saipa-151",
+   "names": [
+    "Saipa 151 pickup",
+    "Saipa Pride pickup"
+   ]
+  },
+  "Quik": {
+   "vehicleId": "saipa-quick",
+   "names": [
+    "Saipa Quik"
+   ]
+  },
+  "Saina": {
+   "vehicleId": "saipa-saina",
+   "names": [
+    "Saipa Saina"
+   ]
+  },
+  "Shahin": {
+   "vehicleId": "saipa-shahin",
+   "names": [
+    "Saipa Shahin"
+   ]
+  },
+  "Tiba": {
+   "vehicleId": "saipa-tiba",
+   "names": [
+    "Saipa Tiba"
+   ]
+  },
+  "RioSD": {
+   "vehicleId": "saipa-kia-rio",
+   "names": [
+    "Kia Rio sedan"
+   ]
+  },
+  "Xantia": {
+   "vehicleId": "saipa-citroen-xantia",
+   "names": [
+    "Citroen Xantia"
+   ]
+  },
+  "RenaultPK": {
+   "vehicleId": "pars-renault-pk",
+   "names": [
+    "Renault PK",
+    "Renault 5"
+   ]
+  },
+  "HcCross": {
+   "vehicleId": "pars-brilliance-h330",
+   "names": [
+    "Brilliance H330 Cross",
+    "Brilliance H3 Cross"
+   ]
+  },
+  "MVM315H": {
+   "vehicleId": "mvm-315",
+   "names": [
+    "MVM 315 hatchback",
+    "Chery Fulwin 2 hatchback"
+   ]
+  },
+  "MVMX22": {
+   "vehicleId": "mvm-x22",
+   "names": [
+    "MVM X22",
+    "Chery Tiggo 3x"
+   ]
+  },
+  "JackS5": {
+   "vehicleId": "jac-s5",
+   "names": [
+    "JAC S5",
+    "JAC Refine S5"
+   ]
+  },
+  "KaraMazdaPickup": {
+   "vehicleId": "bahman-cara-pickup",
+   "names": [
+    "Bahman Cara pickup",
+    "Mazda B-series pickup"
+   ]
+  },
+  "NeissanVanet": {
+   "vehicleId": "zamyad-nissan-pickup",
+   "names": [
+    "Zamyad Nissan pickup",
+    "Nissan Junior pickup"
+   ]
+  },
+  "fownix-fx": {
+   "vehicleId": "fownix-fx",
+   "names": [
+    "Fownix FX",
+    "Chery Omoda 5"
+   ]
+  },
+  "fownix-tiggo-7-pro": {
+   "vehicleId": "fownix-tiggo-7-pro",
+   "names": [
+    "Chery Tiggo 7 Pro",
+    "Fownix Tiggo 7 Pro"
+   ]
+  },
+  "fownix-tiggo-8-pro": {
+   "vehicleId": "fownix-tiggo-8-pro",
+   "names": [
+    "Chery Tiggo 8 Pro",
+    "Fownix Tiggo 8 Pro"
+   ]
+  },
+  "kmc-j7": {
+   "vehicleId": "kmc-j7",
+   "names": [
+    "KMC J7",
+    "JAC J7",
+    "JAC Jiayue A5"
+   ]
+  },
+  "haval-h6": {
+   "vehicleId": "bahman-cheval-6",
+   "names": [
+    "Haval H6"
+   ]
+  },
+  "toyota-corolla": {
+   "vehicleId": "toyota-corolla",
+   "names": [
+    "Toyota Corolla"
+   ]
+  },
+  "toyota-camry": {
+   "vehicleId": "toyota-camry",
+   "names": [
+    "Toyota Camry"
+   ]
+  },
+  "toyota-rav4": {
+   "vehicleId": "toyota-rav4",
+   "names": [
+    "Toyota RAV4"
+   ]
+  },
+  "hyundai-tucson": {
+   "vehicleId": "hyundai-tucson",
+   "names": [
+    "Hyundai Tucson",
+    "Hyundai ix35"
+   ]
+  },
+  "hyundai-elantra": {
+   "vehicleId": "hyundai-elantra",
+   "names": [
+    "Hyundai Elantra"
+   ]
+  },
+  "kia-sportage": {
+   "vehicleId": "kia-sportage",
+   "names": [
+    "Kia Sportage"
+   ]
+  },
+  "kia-cerato": {
+   "vehicleId": "kia-cerato",
+   "names": [
+    "Kia Cerato",
+    "Kia Forte"
+   ]
+  },
+  "bmw-3-series": {
+   "vehicleId": "bmw-3-series",
+   "names": [
+    "BMW 3 Series"
+   ]
+  },
+  "mercedes-c-class": {
+   "vehicleId": "mercedes-c-class",
+   "names": [
+    "Mercedes-Benz C-Class"
+   ]
+  },
+  "peugeot-2008": {
+   "vehicleId": "ikap-peugeot-2008",
+   "names": [
+    "Peugeot 2008"
+   ]
+  },
+  "ikco-tara": {
+   "vehicleId": "ikco-tara",
+   "names": [
+    "Iran Khodro Tara",
+    "IKCO Tara"
+   ]
+  },
+  "saipa-atlas": {
+   "vehicleId": "saipa-atlas",
+   "names": [
+    "Saipa Atlas"
+   ]
+  }
+ },
+ "extra": "<work>/dl/commons_rear_dc32.npz",
+ "lambda": 0.001,
+ "extraGroups": "<work>/dl/commons_groups.json",
+ "viewpointMin": 0.2
+}

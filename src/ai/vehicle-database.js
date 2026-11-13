@@ -131,11 +131,30 @@ export function validateVehicles(data) {
     else if (ids.has(v.id)) errors.push(`${id}: duplicate id`);
     else ids.add(v.id);
     for (const f of ['brand', 'model']) if (typeof v?.[f] !== 'string' || !v[f].trim()) errors.push(`${id}: missing "${f}"`);
-    for (const f of ['aliases', 'badgeTexts', 'engineBadges', 'market']) strArr(v?.[f], f, id);
-    for (const f of ['yearFrom', 'yearTo']) {
-      if (v?.[f] != null && !Number.isInteger(v[f])) errors.push(`${id}: "${f}" must be an integer or null`);
+    for (const f of ['aliases', 'badgeTexts', 'engineBadges', 'market', 'sources']) strArr(v?.[f], f, id);
+    const years = (o, where) => {
+      for (const f of ['yearFrom', 'yearTo']) {
+        if (o?.[f] != null && !Number.isInteger(o[f])) errors.push(`${where}: "${f}" must be an integer or null`);
+      }
+      if (o?.yearFrom != null && o?.yearTo != null && o.yearFrom > o.yearTo) errors.push(`${where}: yearFrom is after yearTo`);
+    };
+    years(v, id);
+    for (const f of ['basedOn', 'country', 'category', 'manufacturer']) {
+      if (v?.[f] != null && typeof v[f] !== 'string') errors.push(`${id}: "${f}" must be a string or null`);
     }
-    if (v?.yearFrom != null && v?.yearTo != null && v.yearFrom > v.yearTo) errors.push(`${id}: yearFrom is after yearTo`);
+    if (v?.generations != null) {
+      if (!Array.isArray(v.generations)) errors.push(`${id}: "generations" must be an array`);
+      else v.generations.forEach((g, k) => {
+        if (typeof g?.name !== 'string' || !g.name.trim()) errors.push(`${id}: generations[${k}] needs a "name"`);
+        years(g, `${id}: generations[${k}]`);
+      });
+    }
+    const rr = v?.rearRecognition;
+    if (rr != null) {
+      if (typeof rr !== 'object' || typeof rr.supported !== 'boolean' || typeof rr.tested !== 'boolean') {
+        errors.push(`${id}: "rearRecognition" must be {supported: boolean, tested: boolean, modelId: string|null}`);
+      } else if (rr.supported && typeof rr.modelId !== 'string') errors.push(`${id}: rearRecognition.supported needs a modelId`);
+    }
     if (!v?.aliases?.length) warnings.push(`${id}: no aliases (only the model name will be matched)`);
   });
   return { errors, warnings };
@@ -160,7 +179,8 @@ export class VehicleDatabase {
     this.version = vehiclesData.version ?? null;
     this.warnings = warnings;
     this.vehicles = vehiclesData.vehicles.map((v) => ({
-      aliases: [], badgeTexts: [], engineBadges: [], market: [], country: null, category: null, generation: null, yearFrom: null, yearTo: null, ...v,
+      aliases: [], badgeTexts: [], engineBadges: [], market: [], country: null, category: null, basedOn: null, generations: [], sources: [],
+      yearFrom: null, yearTo: null, rearRecognition: { supported: false, tested: false, modelId: null }, ...v,
     }));
     this.byId = new Map(this.vehicles.map((v) => [v.id, v]));
     this.#buildBrands(manufacturersData);
@@ -255,6 +275,14 @@ export class VehicleDatabase {
     return this.byId.get(id) ?? null;
   }
 
+  /** Database coverage vs. actual visual (rear-view model) coverage - these are deliberately different numbers. */
+  coverage() {
+    const total = this.vehicles.length;
+    const supported = this.vehicles.filter((v) => v.rearRecognition?.supported).length;
+    const tested = this.vehicles.filter((v) => v.rearRecognition?.supported && v.rearRecognition?.tested).length;
+    return { total, rearSupported: supported, rearTested: tested, textOnly: total - supported };
+  }
+
   /** Strip internal index fields from a vehicle record. */
   #publicVehicle(v) {
     const { phrases, brandKey, engineSet, ...rest } = v;
@@ -326,6 +354,9 @@ export class VehicleDatabase {
       else if (ev.type === 'fuzzy') score = Math.min(0.95, ev.m + 0.15 * b);
       else score = 0.3 + 0.1 * b; // partial
       if (ev.type !== 'strong' && ev.p.pureLetters && ev.p.compact.length <= 2) score = Math.min(score, 0.45); // 1-2 letter bare badge
+      // A bare 1-2 digit number ("3" of MAZDA 3) is everywhere on a rear photo (number plates): without the brand it is
+      // not evidence at all.
+      if (ev.type !== 'strong' && /^\d{1,2}$/.test(ev.p.compact) && !b) score = Math.min(score, 0.2);
       if (b === 0 && otherBrand && ev.type !== 'strong') score *= 0.6; // contradicts a different brand in the text
       const engineHit = [...v.engineSet].some((e) => tokens.includes(e) || spans.has(compactOf(e)));
       if (engineHit && score >= THRESHOLD.possible) score = Math.min(1, score + 0.03); // supporting evidence only

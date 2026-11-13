@@ -3,11 +3,13 @@ import './styles/components.css';
 import './styles/responsive.css';
 
 import { RecognitionClient } from './ai/recognition-client.js';
-import { LABEL_BASE_URL, OCR } from './config.js';
+import { LABEL_BASE_URL, MODELS, OCR } from './config.js';
 import { loadImage, releaseImage } from './image/image-loader.js';
 import { Progress } from './ui/progress.js';
 import { renderOcr } from './ui/ocr-panel.js';
-import { describe, renderError, renderResult } from './ui/results.js';
+import { renderError, renderResult } from './ui/results.js';
+import { fuse } from './ai/fusion.js';
+import { loadVehicleDatabase } from './ai/vehicle-database.js';
 import { initTheme } from './ui/theme.js';
 import { initUpload } from './ui/upload.js';
 import { formatBytes } from './utils/formatting.js';
@@ -44,9 +46,15 @@ const client = new RecognitionClient({ disableWorker: params.get('worker') === '
 const forceWasm = params.get('backend') === 'wasm';
 if (forceWasm) client.configure({ forceWasm: true });
 
+const dbPromise = loadVehicleDatabase().catch((e) => {
+  console.error('[CarVision] vehicle database failed to load', e);
+  return null;
+});
+
 /** @type {{bitmap, previewUrl, info}|null} */
 let current = null;
 let lastResult = null;
+let lastFusion = null;
 let runToken = 0;
 let idleTimer = null;
 const IDLE_RELEASE_MS = 10 * 60 * 1000;
@@ -125,6 +133,18 @@ els.ocrToggle.addEventListener('change', () => {
   else els.ocrSection.hidden = true;
 });
 
+/** Fused verdict (visual + text) shown in the result card. text = db.match(...) or null. */
+function show(result, db, text, textPending) {
+  const visual = result.visual?.candidates ?? [];
+  const fusion = result.status === 'ok' ? fuse({ visual, visualOpenSetOk: result.visual?.openSet?.ok ?? true, text, getVehicle: (id) => db?.getVehicle(id) ?? null }) : null;
+  lastFusion = fusion;
+  renderResult(els.results, result, { fusion, db, textPending }, {
+    onWholeImage: () => run({ wholeImage: true, detections: result.detections }),
+    onIgnoreViewpoint: () => run({ ignoreViewpoint: true, box: result.box, detections: result.detections }),
+    onSecondary: () => run({ secondary: true, ignoreViewpoint: result.warnings.includes('viewpoint-overridden'), box: result.box, detections: result.detections }),
+  });
+}
+
 /** Read text on the selected vehicle and match it against the local JSON vehicle database. Never blocks classification. */
 async function runOcr(result, token) {
   els.ocrSection.hidden = true;
@@ -133,19 +153,22 @@ async function runOcr(result, token) {
   renderOcr(els.ocrBody, { phase: 'loading', label: 'Preparing text recognition…' });
   els.ocrSection.hidden = false;
   try {
-    const [{ readText }, { loadVehicleDatabase }, { compareEvidence }] = await Promise.all([
-      import('./ai/ocr-engine.js'),
-      import('./ai/vehicle-database.js'),
-      import('./ai/ocr-evidence.js'),
-    ]);
-    const db = await loadVehicleDatabase();
-    const { words } = await readText(current.bitmap, result.box, (m) => {
-      if (alive()) renderOcr(els.ocrBody, { phase: 'loading', label: `Reading text: ${m.status}…`, progress: typeof m.progress === 'number' ? m.progress : null });
-    });
+    const [{ readText }, db] = await Promise.all([import('./ai/ocr-engine.js'), dbPromise]);
+    if (!db) throw new Error('the local vehicle database could not be loaded');
+    const visualIds = (result.visual?.candidates ?? []).slice(0, 3).map((c) => c.vehicleId);
+    const { words, passes } = await readText(
+      current.bitmap,
+      result.box,
+      (m) => {
+        if (alive()) renderOcr(els.ocrBody, { phase: 'loading', label: `Text recognition: ${m.status}…`, progress: typeof m.progress === 'number' ? m.progress : null });
+      },
+      // Stop early once the badge text fully names a vehicle that the rear-view model also proposes.
+      { shouldStop: (w) => { const b = db.match(w).best; return !!b && visualIds.includes(b.vehicle.id); } },
+    );
     if (!alive()) return;
     const match = db.match(words);
-    const title = result.primary ? describe(result.primary).title : null;
-    renderOcr(els.ocrBody, { phase: 'done', words, match, evidence: compareEvidence(db, match, title) });
+    show(result, db, match, false);
+    renderOcr(els.ocrBody, { phase: 'done', words, match, fusion: lastFusion, passes, getVehicle: (id) => db.getVehicle(id) });
   } catch (err) {
     if (!alive()) return;
     console.error('[CarVision] OCR failed', err);
@@ -167,7 +190,9 @@ async function run(options = {}) {
     if (token !== runToken) return; // a newer request superseded this one
     lastResult = result;
     progress.hide();
-    renderResult(els.results, result, { onWholeImage: () => run({ wholeImage: true, detections: result.detections }) });
+    const db = await dbPromise;
+    if (token !== runToken) return;
+    show(result, db, null, result.status === 'ok' && ocrEnabled());
     drawBoxes(result);
     renderInfo(current.info, result);
     runOcr(result, token); // not awaited: OCR never delays the classification result
@@ -245,7 +270,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 
 if (import.meta.env.DEV) {
   // Dev-only inspection hook used by manual/automated browser tests.
-  Object.defineProperty(window, '__cv', { get: () => ({ result: lastResult, client }) });
+  Object.defineProperty(window, '__cv', { get: () => ({ result: lastResult, fusion: lastFusion, client }) });
 }
 
 window.addEventListener('pagehide', () => {
@@ -253,25 +278,24 @@ window.addEventListener('pagehide', () => {
   import('./ai/ocr-engine.js').then((m) => m.releaseOcr()).catch(() => {});
 });
 
-// ---------- static content ----------
-async function fillChips() {
-  const intl = ['Toyota Camry', 'Honda Accord', 'Hyundai Sonata', 'Volkswagen Golf', 'Porsche Panamera', 'Tesla Model S', 'Ford Mustang', 'BMW 3 Series Sedan', 'Mercedes-Benz S-Class', 'Audi A5', 'Chevrolet Camaro', 'Nissan Leaf'];
+// ---------- static content: database vs. visual coverage ----------
+async function fillCoverage() {
   const fill = (ul, items) => ul.replaceChildren(...items.map((t) => Object.assign(document.createElement('li'), { textContent: t })));
   try {
-    const [ir, it] = await Promise.all([
-      fetch(LABEL_BASE_URL + 'iranian-labels.json').then((r) => r.json()),
-      fetch(LABEL_BASE_URL + 'international-labels.json').then((r) => r.json()),
-    ]);
-    fill($('chips-iran'), ir.filter((l) => l.verified).map((l) => l.title));
-    fill(
-      $('chips-intl'),
-      intl.map((q) => it.find((l) => l.raw.startsWith(q))).filter(Boolean).map((l) => `${l.manufacturer} ${l.model}`),
-    );
+    const [db, head] = await Promise.all([dbPromise, fetch(LABEL_BASE_URL + MODELS.rear.head).then((r) => r.json())]);
+    if (!db) return;
+    const name = (id) => { const v = db.getVehicle(id); return v ? `${v.brand} ${v.model}` : id; };
+    const trained = [...new Set(head.classes.filter((c) => c.kind === 'trained').map((c) => c.vehicleId))];
+    const zero = [...new Set(head.classes.filter((c) => c.kind !== 'trained').map((c) => c.vehicleId))].filter((id) => !trained.includes(id));
+    const cov = db.coverage();
+    $('coverage-summary').textContent = `The local database lists ${cov.total} vehicles. ${trained.length + zero.length} of them can be recognised visually from the rear: ${trained.length} trained on rear photos, ${zero.length} with few (under 10) or no rear training photos. The other ${cov.total - trained.length - zero.length} can only be identified from readable badge text.`;
+    fill($('chips-trained'), trained.map(name).sort());
+    fill($('chips-zeroshot'), zero.map(name).sort());
   } catch {
     /* decorative only */
   }
 }
-fillChips();
+fillCoverage();
 
 (window.requestIdleCallback || ((f) => setTimeout(f, 800)))(async () => {
   try {

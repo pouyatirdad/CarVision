@@ -30,9 +30,19 @@ export async function detectWebGPU() {
   }
 }
 
+let pruned = false;
+
 async function openCache() {
   try {
-    return typeof caches !== 'undefined' ? await caches.open(CACHE_NAME) : null;
+    const cache = typeof caches !== 'undefined' ? await caches.open(CACHE_NAME) : null;
+    if (cache && !pruned) {
+      pruned = true;
+      // Drop cached models that are no longer part of this version (renamed/replaced files) to free space.
+      const base = globalThis.location?.href ?? 'http://localhost/';
+      const current = new Set(Object.values(MODELS).map((m) => new URL(MODEL_BASE_URL + m.file, base).href));
+      for (const req of await cache.keys()) if (!current.has(req.url)) await cache.delete(req);
+    }
+    return cache;
   } catch {
     return null; // private mode / blocked storage: just download every time
   }
@@ -189,7 +199,12 @@ export class ModelManager {
   /** Run a model on a prepared CHW float32 buffer. Returns the output Float32Array. */
   async run(key, data, dims) {
     const m = await this.get(key);
-    const out = await m.session.run({ [m.inputName]: new ort.Tensor('float32', data, dims) });
+    // ORT-Web sessions reject overlapping run() calls ("Session already started"); a new upload can start while the
+    // previous image is still being processed, so runs on one session are queued.
+    const previous = m.queue ?? Promise.resolve();
+    const job = previous.catch(() => {}).then(() => m.session.run({ [m.inputName]: new ort.Tensor('float32', data, dims) }));
+    m.queue = job;
+    const out = await job;
     return { output: out[m.outputName].data, provider: m.provider };
   }
 

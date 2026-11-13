@@ -1,89 +1,88 @@
-# CarVision – AI car recognition in your browser
+# CarVision – rear-view car recognition in your browser
 
-Identify **Iranian-market** and **international** cars from a photo. Everything – car detection, model
-recognition, routing between the two classifiers – runs **locally in the browser** with ONNX Runtime Web
-(WebGPU when available, WebAssembly otherwise). There is no backend, no API, no account and no upload.
+Identify **Iranian-market and imported cars from a photo of their rear**. Everything – vehicle detection, the
+rear-view check, rear-view recognition, badge OCR and database matching – runs **locally in the browser** with ONNX
+Runtime Web and tesseract.js. There is no backend, no API, no account and no upload.
 
 | Home | Result |
 |---|---|
 | ![Home](docs/screenshots/home.jpg) | ![Result](docs/screenshots/result.jpg) |
 
-<sub>Result screenshot: photo "Tara" by Saeed Sajjadi, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), via Wikimedia Commons.</sub>
+<sub>Result screenshot (v1 UI): photo "Tara" by Saeed Sajjadi, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), via Wikimedia Commons.</sub>
 
-> **Read this first – what the AI can and cannot do.** The recognition is real (three real pretrained models,
-> nothing is faked or hard-coded), but it is a statistical estimate with clear limits. See
-> [Known limitations](#known-limitations) and [docs/RESEARCH.md](docs/RESEARCH.md) for the measured numbers.
+> **Read this first.** Users upload **one rear photo** (straight or slightly angled). The recognition is real and
+> measured – see [docs/REAR-VIEW.md](docs/REAR-VIEW.md) – but it has clear limits: it knows 44 vehicles visually
+> (38 trained on rear photos), newer Chinese models are **not** reliably recognised from the rear yet, and about half
+> of the photos of a vehicle it does not know still get a confident wrong name. The v1 multi-view research is in
+> [docs/RESEARCH.md](docs/RESEARCH.md).
 
 ## Features
 
-* Drag & drop, file picker, camera capture on phones; JPG / PNG / WEBP up to 15 MB; real validation (magic bytes,
-  pixel-count guard, corrupted-file handling); EXIF orientation honoured; huge photos are down-scaled once.
-* Vehicle **detection** first (so the classifier sees the car, not the street); several cars → click a box to
-  identify another one.
-* Manufacturer, model, category, country (when known), confidence, top alternatives, image info, processing time,
-  models/back-end used. Low-confidence and "uncertain" results are flagged, never presented as certain.
-* Real progress only: model download bytes, "starting model", "detecting…", "identifying…".
-* Dark / light theme, responsive, keyboard accessible, `prefers-reduced-motion` respected.
-* Models are downloaded lazily, cached (Cache API) and the app shell is cached by a service worker, so it works
-  **offline after the first visit**.
+* "Upload a photo of the rear of your car." – drag & drop, file picker, camera; JPG / PNG / WEBP up to 15 MB; real
+  validation (magic bytes, pixel-count guard, corrupted files); EXIF orientation; an example of correct framing.
+* **Rear-view check**: front, side and interior photos get "Please upload a photograph of the rear of the vehicle."
+  (with an "analyse anyway" override for borderline angles).
+* **Rear-view recognition** from tail lights, trunk, bumper and proportions – works without readable badges.
+* **Badge OCR** (English + Persian) with several attempts per photo: original, contrast-stretched, sharpened, three
+  enlarged rear badge zones, and enlarged re-reads of low-confidence words.
+* **Local JSON vehicle database** (90 vehicles, sourced) – the central list of names, aliases, badge texts and
+  which vehicles the image model actually covers (`rearRecognition`).
+* **Prediction fusion** of image and text evidence by explicit rules (no averaging of unrelated scores), with
+  identified / likely / uncertain verdicts and the reason ("rear appearance and badge text agree", …).
+* Optional second opinion from the v1 general-view classifiers (downloaded only on request).
+* Real progress, dark / light theme, responsive, keyboard accessible, works **offline after the first visit**.
 
 ## Technology stack
 
 HTML5 · CSS3 · vanilla JavaScript (ES modules) · [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) 1.31
-(WebGPU → WASM) · Canvas / OffscreenCanvas · Web Worker · Vite (build only) · GitHub Actions + GitHub Pages.
-No framework, no Node/ASP.NET/Python at runtime, no external AI API. Text recognition uses tesseract.js (self-hosted WASM). Python is used **only offline** to convert
-weights to ONNX (`scripts/`).
+(WASM; WebGPU for the detector) · [tesseract.js](https://github.com/naptha/tesseract.js) (self-hosted) · Canvas /
+OffscreenCanvas · Web Workers · Vite (build only) · GitHub Actions + GitHub Pages. No framework, no server, no external
+AI/OCR API. Python is used **only offline** (`scripts/`) to convert models and train the rear-view head.
 
 ## Models (what is actually implemented)
 
 | Role | Model | Source / licence | Size | Backend |
 |---|---|---|---|---|
 | Vehicle detector (car / bus / truck) | YOLOX-tiny, COCO | [Megvii YOLOX](https://github.com/Megvii-BaseDetection/YOLOX) 0.1.1rc0 – Apache-2.0 | 20.2 MB | WebGPU → WASM |
-| Iranian-market classifier, **27 classes** | ResNet18 `car_name_model.pth` converted to ONNX | [RezaGooner/Multi-Task-Iranian-Vehicle-Monitoring-System](https://github.com/RezaGooner/Multi-Task-Iranian-Vehicle-Monitoring-System) – MIT | 44.8 MB | WebGPU → WASM |
-| International classifier, **196 classes** (Stanford Cars) | ViT-B/16, exported to ONNX + dynamic int8 | [therealcyberlord/stanford-car-vit-patch16](https://huggingface.co/therealcyberlord/stanford-car-vit-patch16) – Apache-2.0 | 87.0 MB | WASM¹ |
+| **Rear-view encoder** | CLIP ViT-B/32 image tower, weight-only 8-bit (`MatMulNBits`) | [OpenCLIP](https://github.com/mlfoundations/open_clip) `datacomp_xl_s13b_b90k` ([HF](https://huggingface.co/laion/CLIP-ViT-B-32-DataComp.XL-s13B-b90K)) – MIT | 98.2 MB | WASM¹ |
+| **Rear-view head** + zero-shot rear check | linear head (46 classes → 44 vehicles) initialised from CLIP text prompts, trained on rear crops; k-means prototypes for the unknown-vehicle check | trained for CarVision (`scripts/train_rear_head.py`) – see licensing note below | 1 MB JSON | JS |
+| Badge OCR | tesseract.js 7, `eng` + `fas` | Apache-2.0 | ≈7 MB | WASM (own worker) |
+| *Optional second opinion* | v1 Stanford-Cars ViT-B/16 int8 (196 classes) + Iranian ResNet18 (27 classes) | Apache-2.0 / MIT | 87 + 45 MB | WASM / WebGPU |
 
-¹ int8 dynamic quantization uses `MatMulInteger`, which the WebGPU provider does not implement, so this model is
-pinned to WASM (measured: ≈1.2–1.5 s per image either way).
+¹ ORT-Web's WebGPU `MatMulNBits` kernel only supports 2/4-bit weights; 4-bit (and dynamic int8) were measured to
+damage this encoder (cosine to fp32 0.96–0.97 vs 0.9998 for 8-bit), so it runs on WASM.
 
-Iranian classes: Arisan, Atlas, Dena, L90, Mazda vanet, Megan, Neissan, Pars, 206, 206 SD, 207, 405, Peykan, Pride,
-Pride vanet, Pride 111, Quik, Rana, Rio, Saina, Samand, Shahin, Soren, Tara, Tiba, Tiba 2, Zantia.
-International classes: the 196 Stanford Cars classes (US-market cars, mostly 1991–2012).
+**Measured** ([docs/REAR-VIEW.md §5](docs/REAR-VIEW.md)): on 3,005 held-out SIVD rear photos (29 Iranian classes)
+**87.9 % top-1 / 97.3 % top-3**; on independent Wikimedia Commons rear photos (cross-fitted, n=429)
+**83.2 % / 94.9 %**. At the "identified" threshold the app answers 88 % of SIVD photos with 94 % precision. The v1
+pipeline on the same kind of photos: 25.5 % correct and 27.2 % confidently wrong (SIVD), 2.7 % correct / 54.1 % wrong
+(Commons). Rear-view check: 97.9 % of rear photos accepted, 0 / 141 front photos accepted.
 
-**Measured** (own evaluation, `scripts/eval_international.py`): the shipped int8 ViT scores **88.0 % top-1 /
-96.3 % top-5** on 400 random Stanford Cars test images (fp32: 87.75 % / 96.5 %). The Iranian model's accuracy was
-**not** independently measured (no public held-out Iranian test set was available offline); upstream claims 97 %
-on its own split, which I could not reproduce. Full research report: [docs/RESEARCH.md](docs/RESEARCH.md).
+**Licensing note:** the rear-view head is trained on the SIVD dataset (scraped Iranian ad photos, **no licence
+stated**) plus freely licensed Wikimedia Commons photos. No image is redistributed, but check
+[docs/REAR-VIEW.md §6](docs/REAR-VIEW.md) before any commercial use.
 
-**Not available / not implemented:** a model that knows cars newer than ~2012, Kia / Renault / Peugeot as
-*international* makes (they are not Stanford Cars classes; Iranian-built Peugeots/Renaults/Kia Rio are covered by the
-Iranian model), model-year or trim recognition. The Stanford "year" in a label is shown only as a *reference class year*.
+### How a result is produced
 
-### Text on the car (OCR) and the local vehicle database
+1. Detect the main vehicle (YOLOX-tiny) and crop it (padded to a square so both tail lights stay visible).
+2. CLIP embedding → zero-shot **rear-view check** (`REAR.viewpointMin`) → "please upload a rear photo" if it fails.
+3. **Rear-view head**: calibrated probability per vehicle + an unknown-vehicle check (similarity to the class's
+   training prototypes). Shown immediately.
+4. **OCR** reads the badges (multi-pass), the text is matched against `public/data/vehicles.json` (a vehicle is only
+   named from text with model evidence – full alias or brand + model; brand-only or engine badges never name a model).
+5. **Fusion** (`src/ai/fusion.js`): text naming a vehicle in the visual top-3 → identified (high); confident visual
+   contradicted by identified text → uncertain; identified text alone → identified from text; confident visual →
+   identified (high if a badge brand/model supports it, uncertain if the badge shows another brand); medium visual →
+   "likely"; otherwise uncertain with candidates.
 
-After the image result is shown, the app reads text on the selected vehicle with self-hosted
-[tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0; English + Persian `best_int` language data, ≈7 MB, downloaded on first use,
-no CDN) and matches the words against `public/data/vehicles.json` (a plain JSON file you can edit without touching code – see
-[public/data/README.md](public/data/README.md)). A vehicle is only "identified" from text when there is model evidence
-(a full alias or brand + model); a brand alone or an engine label (1.5, 2.0…) never names a model. The text result is shown next
-to the image models' answer (agrees / differs) and never changes it. It can be switched off with the checkbox under the result.
+Thresholds live in [`src/config.js`](src/config.js) (`REAR`, `OCR`) and are backed by the measurements above.
 
-Measured behaviour (own checks, not a benchmark): clean Latin badge text rendered on an image (TOYOTA COROLLA 1.8, LAMARI NEO 1.5,
-PEUGEOT 206, SAIPA SHAHIN, MERCEDES C200, DENA+) was read and matched to the right database vehicle in all cases. On the real
-960 px photos in my test set the engine found almost no usable badge text (mostly noise, which is filtered by confidence), and
-**Persian text was not recognised reliably** with the available language data. Treat OCR as a bonus clue for close-up photos.
+### Coverage: database vs. image model
 
-### How the two classifiers are combined
-
-They are closed-set softmax models whose confidences are **not comparable** (the Iranian ResNet18 is over-confident
-on foreign cars – 39 % of Stanford cars pass a 0.65 threshold). So the app never picks "the highest raw confidence":
-
-1. Detect the main vehicle and crop it.
-2. Run the international ViT. Top-1 ≥ **0.80** → international result (the Iranian model isn't even loaded).
-3. Otherwise run the Iranian model. Top-1 ≥ **0.80** → Iranian result.
-4. Otherwise → **"uncertain"**: closest guesses from both models are listed, labelled by domain.
-
-Thresholds live in [`src/config.js`](src/config.js); the derivation and the data are in
-[docs/RESEARCH.md §4](docs/RESEARCH.md).
+The database lists **90** vehicles (Iranian, Chinese, Korean, Japanese, European models sold in Iran, each with
+`sources`). The image model covers **44** of them – the `rearRecognition` field says which, and whether each is
+`trained` (≥ 10 rear photos) or has few/no photos. The other 46 are identified only from readable badge text. The page
+shows this split under "What it can recognise". Edit vehicles without code changes: [public/data/README.md](public/data/README.md).
 
 ## Run locally
 
@@ -92,7 +91,7 @@ Requires Node.js 20+.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # unit tests (router, post-processing, validation)
+npm test           # unit tests (fusion, rear head, OCR passes, database, router, post-processing, validation)
 npm run build      # -> dist/
 npm run preview
 ```
@@ -102,27 +101,32 @@ the main thread (the automatic fallback for browsers without module workers / Of
 
 ## Model files and conversion
 
-The three `.onnx` files are committed in `public/models/` (largest is 87 MB – under GitHub's 100 MB limit, but expect a
-size warning above 50 MB; Git LFS is **not** needed and would break Pages serving). To rebuild them (Python is needed
-only here):
+The `.onnx` files are committed in `public/models/` (largest is the 98.2 MB rear-view encoder – under GitHub's 100 MiB
+limit, expect a size warning above 50 MB; Git LFS is **not** needed and would break Pages serving). Python is needed
+only to rebuild them:
 
 ```bash
-# 1. Iranian ResNet18 (weights from the MIT-licensed upstream repo, loaded with weights_only=True)
+# Rear-view encoder (OpenCLIP ViT-B/32 DataComp, MIT) -> 8-bit MatMulNBits ONNX.
+# Copy to public/models/ under a NEW versioned file name and update MODELS.rear.file (the Cache API is keyed by URL).
+python scripts/convert_rear_encoder.py ./out ViT-B-32 datacomp_xl_s13b_b90k
+
+# Rear-view head: embed rear training/test images (zip of <split>/<class>/<file>), then train + evaluate.
+python scripts/embed_images.py train.zip train.npz public/models/vehicle-detector.onnx ViT-B-32 datacomp_xl_s13b_b90k --pad
+python scripts/train_rear_head.py scripts/data/rear-head-config.json ./out   # -> rear-head.json + report.json
+cp out/rear-head.json public/labels/ && node scripts/sync-rear-coverage.mjs out/report.json
+
+# Optional: freely licensed rear/front test photos from Wikimedia Commons (manifest keeps licence + author per file)
+node scripts/collect-commons.mjs scripts/data/commons-classes.json ./commons
+
+# v1 models (optional second opinion)
 python scripts/convert_iranian.py car_name_model.pth public/models/iranian-cars.onnx
-
-# 2. International ViT: download the Hugging Face model folder, then
 python scripts/convert_international.py ./stanford-car-vit-patch16 ./out
-#    -> out/international-cars.onnx (int8, copy to public/models/)
-python scripts/eval_international.py out/international-cars.onnx out/international-labels.raw.json <stanford_test_images_dir>
-
-# 3. Detector: official release asset, renamed
-#    https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx -> public/models/vehicle-detector.onnx
-
-# 4. Regenerate the international label table from the model's own config
+# Detector: https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx -> public/models/vehicle-detector.onnx
 npm run labels
 ```
 
-Python deps: `torch torchvision onnx onnxruntime transformers pillow numpy`.
+Python deps: `torch torchvision open_clip_torch onnx onnxruntime pillow numpy` (+ `transformers` for the v1 ViT).
+A CPU is enough: embedding runs at ≈6 images/s on the development laptop, the head trains in seconds.
 
 To host the models elsewhere (CORS enabled), build with `VITE_MODEL_BASE_URL=https://your.host/path/`.
 No secrets or API keys exist in the frontend.
@@ -145,41 +149,43 @@ BASE_PATH=/carvision/ npm run build && npx vite preview --base /carvision/
 
 ## Browser compatibility
 
-Needs ES modules, WebAssembly, Canvas 2D. WebGPU is optional. Chrome / Edge (WebGPU + WASM) – tested; Firefox and Safari should work via WASM (WebGPU where shipped) but are **untested**, Web Workers with OffscreenCanvas preferred, automatic main-thread fallback otherwise.
-See [docs/TESTING.md](docs/TESTING.md) for what was **actually** tested (Chromium only so far).
+Needs ES modules, WebAssembly, Canvas 2D. WebGPU is optional (only the detector uses it). Chrome / Edge – tested;
+Firefox and Safari should work via WASM but are **untested**. Web Workers with OffscreenCanvas preferred, automatic
+main-thread fallback otherwise. See [docs/TESTING.md](docs/TESTING.md) for what was **actually** tested.
 
 ## Performance
 
-First use downloads the models (up to ≈152 MB for an Iranian car: detector + ViT + ResNet18; ≈107 MB for a foreign car
-the ViT recognises confidently) plus a 29.5 MB WASM runtime; afterwards everything comes from cache. Typical latency
-after warm-up on a desktop Chromium: **≈1.2–2 s per image** (WASM only: ≈1.7–2 s; the very first run adds ≈5–8 s of one-off initialisation / shader compilation). Memory: model sessions are released after 10 minutes idle and on page hide.
+First use downloads ≈120 MB (detector 20 MB + rear-view encoder 98 MB + head 1 MB) plus the WASM runtime, and ≈7 MB
+of OCR data when badge reading is on; afterwards everything comes from cache. Measured on the development laptop
+(Chromium, WASM): rear-view encoder ≈0.6–0.7 s per photo after warm-up, detection ≈0.1 s; OCR adds up to 6–10 reading
+attempts in its own worker after the result is already shown. Model sessions are released after 10 minutes idle and on
+page hide.
 
 ## Privacy
 
 Images are decoded in your browser, passed to a Web Worker and never sent anywhere – the only network requests are
-for the app's own static files (page, WASM runtime, models, label files). Nothing is stored permanently: the only
-persisted data are the model files and app shell (browser caches) and the theme preference. Verified by inspecting the
-network log and by running a full recognition with the web server stopped.
+for the app's own static files (page, WASM runtime, models, label and data files, OCR data). Nothing is stored
+permanently: the only persisted data are the model files and app shell (browser caches), the theme and the OCR switch.
 
 ## Known limitations
 
-* **Out-of-domain confidence is unstable.** For cars the ViT does not know (e.g. a real Samand), its top class and
-  confidence can swing a lot with a few pixels of crop change (measured 0.39 → 0.79). About 10–14 % of the Iranian
-  test photos were therefore named as an old foreign look-alike (e.g. "Audi 100 1994"). No fix was found that is
-  worth its cost (test-time augmentation helps only a little, see research report).
-* **Cars newer than ≈2012 are largely unknown** to the international model.
-* Stricter thresholds mean many correct-but-moderate results (e.g. 54–79 %) are reported as "uncertain" with the best
-  guess listed.
-* Some Iranian dataset labels (Arisan, Atlas, Rana, Zantia, "Neissan") couldn't be mapped to a verified make; the
-  dataset label is shown without invented details.
-* The detector (YOLOX-tiny) sometimes misses a car (observed: a Renault L90 photo) and returns bystander cars.
-* Iranian-model accuracy is unmeasured here; the Iranian training data's own licence isn't stated by its author
-  (only trained weights are redistributed).
-* Heavily blurred photos (10 px blur) are not detected as containing a car.
+* **Coverage is limited to 44 vehicles visually** (38 trained on rear photos). Everything else in the 90-vehicle
+  database is identified only from readable badge text.
+* **Newer Chinese models are not reliably recognised from the rear** (Fownix FX, Tiggo 7/8 Pro, KMC J7, Lamari, …):
+  there were only 0–5 licence-clean rear photos per model. Collecting own rear photos is the way to fix this.
+* **Unknown vehicles:** about half of the photos of a vehicle the model was not trained on still get a confident wrong
+  name (measured: 46.8 % rejected). A readable badge that names another vehicle turns the result into "uncertain".
+* Generations/facelifts are not distinguished, and the model year is never determined.
+* Test accuracy on SIVD is in-domain (same ad source as training); the independent Commons estimate is 83 % top-1.
+* The rear-view check lets ≈10 % of side views (mostly pickups) through and rejects ≈2 % of rear photos (mostly very
+  oblique ones) – the user can override.
+* OCR: small or chrome badges are often unreadable; Persian badge text is not read reliably.
+* The detector (YOLOX-tiny) sometimes misses a car or picks a bystander car (click another box).
 
 ## Licence & attribution
 
-Application code: MIT ([LICENSE](LICENSE)). Model weights keep their own licences, listed above (Apache-2.0, MIT,
-Apache-2.0). ONNX Runtime Web: MIT. The Stanford Cars dataset
-([Krause et al., 2013](https://ai.stanford.edu/~jkrause/cars/car_dataset.html)) is used for the international model's
-labels and for evaluation only; no dataset images are redistributed.
+Application code: MIT ([LICENSE](LICENSE)). Model weights keep their own licences, listed above (Apache-2.0, MIT).
+ONNX Runtime Web: MIT. tesseract.js: Apache-2.0. **The rear-view head is trained on the SIVD dataset (licence not
+stated by its authors) and on Wikimedia Commons photos (CC BY / BY-SA / PD)** – no dataset images are redistributed;
+see [docs/REAR-VIEW.md §6](docs/REAR-VIEW.md) before commercial use. The Stanford Cars dataset
+([Krause et al., 2013](https://ai.stanford.edu/~jkrause/cars/car_dataset.html)) is used by the optional v1 model.

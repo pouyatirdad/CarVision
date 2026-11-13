@@ -1,8 +1,13 @@
 // Text recognition on the vehicle crop, using self-hosted tesseract.js (worker, WASM core and language data are
 // all served from this site - see scripts/copy-ocr.mjs). tesseract.js runs in its own Web Worker, so the main
 // thread stays responsive. Independent of the image classifiers and of the vehicle database: it only returns words.
+//
+// Rear badges are small, so several attempts are made (see ai/ocr-passes.js): original, contrast-stretched and
+// sharpened crops, upscaled rear badge zones, and upscaled re-reads of words that were seen with low confidence.
 
 import { OCR } from '../config.js';
+import { grayToRGBA, sharpen, stretchContrast, toGray } from '../utils/image-ops.js';
+import { mergePassWords, planPasses, refinePasses } from './ocr-passes.js';
 
 let workerPromise = null;
 let progressListener = null;
@@ -35,41 +40,78 @@ async function getWorker() {
   return workerPromise;
 }
 
-function cropToCanvas(bitmap, box) {
-  const sx = Math.max(0, Math.floor(box.x1));
-  const sy = Math.max(0, Math.floor(box.y1));
-  const sw = Math.max(1, Math.min(bitmap.width, Math.ceil(box.x2)) - sx);
-  const sh = Math.max(1, Math.min(bitmap.height, Math.ceil(box.y2)) - sy);
-  const k = Math.min(OCR.maxUpscale, OCR.maxSide / Math.max(sw, sh)); // small crops are enlarged: badge letters are tiny
+/** Draw `region` of the bitmap scaled by `scale` and apply the pass variant. */
+function renderPass(bitmap, { region, scale, variant }) {
+  const sw = Math.max(1, region.x2 - region.x1);
+  const sh = Math.max(1, region.y2 - region.y1);
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(sw * k));
-  canvas.height = Math.max(1, Math.round(sh * k));
-  const ctx = canvas.getContext('2d');
+  canvas.width = Math.max(1, Math.round(sw * scale));
+  canvas.height = Math.max(1, Math.round(sh * scale));
+  const ctx = canvas.getContext('2d', { willReadFrequently: variant !== 'original' });
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bitmap, region.x1, region.y1, sw, sh, 0, 0, canvas.width, canvas.height);
+  if (variant === 'original') return canvas;
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let gray = stretchContrast(toGray(img.data));
+  if (variant === 'sharpen') gray = sharpen(gray, canvas.width, canvas.height, 1.2);
+  img.data.set(grayToRGBA(gray));
+  ctx.putImageData(img, 0, 0);
   return canvas;
+}
+
+const cleanText = (t) => [...String(t ?? '').replace(/[^\p{L}\p{N}.]/gu, '')].length;
+
+async function recognisePass(worker, bitmap, pass) {
+  const canvas = renderPass(bitmap, pass);
+  // Per-word data is only produced when "blocks" output is requested (tesseract.js >= 6); words are nested.
+  const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
+  const flat = data.words ?? (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)));
+  return flat
+    .map((w) => ({ text: String(w.text ?? '').trim(), confidence: (w.confidence ?? 0) / 100, bbox: w.bbox, pass }))
+    // single letters are almost always noise, but a single DIGIT is part of many model names (TIGGO 8, MAZDA 3)
+    .filter((w) => cleanText(w.text) >= OCR.minWordLength || /^\d$/.test(w.text));
 }
 
 /**
  * @param {ImageBitmap} bitmap decoded photo
  * @param {{x1,y1,x2,y2}} box region to read (the selected vehicle)
- * @param {(m:{status:string, progress:number})=>void} [onProgress] real progress from tesseract.js
- * @returns {Promise<{words: {text:string, confidence:number}[], rawText:string}>} confidence in 0..1
+ * @param {(m:{status:string, progress:number|null})=>void} [onProgress] progress (pass n of m)
+ * @param {{shouldStop?: (words:object[]) => boolean, maxPasses?: number}} [options]
+ *   shouldStop: called after each pass with the merged words so far; return true to skip the remaining passes
+ *   (e.g. the database already identified a vehicle from a full alias).
+ * @returns {Promise<{words: {text:string, confidence:number, passes:string[]}[], passes: {name:string, ms:number, words:number}[]}>}
  */
-export async function readText(bitmap, box, onProgress) {
-  progressListener = onProgress ?? null;
+export async function readText(bitmap, box, onProgress, { shouldStop = null, maxPasses = OCR.maxPasses } = {}) {
+  const report = (status, progress) => onProgress?.({ status, progress });
+  progressListener = (m) => (m.status && !/recogniz/i.test(m.status) ? report(m.status, typeof m.progress === 'number' ? m.progress : null) : null);
   try {
     const worker = await getWorker();
-    const canvas = cropToCanvas(bitmap, box);
-    // Per-word data is only produced when "blocks" output is requested (tesseract.js >= 6); words are nested.
-    const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
-    const flat = data.words ?? (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)));
-    const words = flat
-      .map((w) => ({ text: String(w.text ?? '').trim(), confidence: (w.confidence ?? 0) / 100 }))
-      .filter((w) => w.confidence >= OCR.minWordConfidence && [...w.text.replace(/[^\p{L}\p{N}.]/gu, '')].length >= OCR.minWordLength);
-    return { words, rawText: data.text ?? '' };
+    progressListener = null;
+    const image = { width: bitmap.width, height: bitmap.height };
+    const queue = planPasses(box, image, { maxSide: OCR.maxSide, maxUpscale: OCR.maxUpscale, zoneUpscale: OCR.zoneUpscale });
+    const results = [];
+    const log = [];
+    const low = [];
+    let refined = false;
+    let merged = [];
+    for (let i = 0; i < queue.length && i < maxPasses; i++) {
+      const pass = queue[i];
+      report(`reading badges (attempt ${i + 1} of ${Math.min(maxPasses, queue.length)})`, i / Math.min(maxPasses, queue.length));
+      const t = performance.now();
+      const words = await recognisePass(worker, bitmap, pass);
+      log.push({ name: pass.name, ms: Math.round(performance.now() - t), words: words.filter((w) => w.confidence >= OCR.minWordConfidence).length });
+      results.push({ pass: pass.name, words: words.filter((w) => w.confidence >= OCR.minWordConfidence * 0.75) });
+      for (const w of words) if (w.confidence >= OCR.refineMinConfidence && w.confidence < OCR.minWordConfidence && cleanText(w.text) >= 2) low.push(w);
+      merged = mergePassWords(results, { minConfidence: OCR.minWordConfidence, minLength: OCR.minWordLength });
+      if (shouldStop?.(merged)) break;
+      if (!refined && i === queue.length - 1 && low.length) {
+        refined = true;
+        queue.push(...refinePasses(low, image, { maxRegions: OCR.maxRefineRegions }));
+      }
+    }
+    return { words: merged.map(({ text, confidence, passes }) => ({ text, confidence, passes })), passes: log };
   } finally {
     progressListener = null;
   }

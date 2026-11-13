@@ -3,7 +3,8 @@ import { formatBytes } from '../utils/formatting.js';
 
 const STATUS_TEXT = {
   detect: 'Looking for vehicles in the photo…',
-  'classify-international': 'Identifying the vehicle (international model)…',
+  rear: 'Checking the rear view and identifying the vehicle…',
+  'classify-international': 'Second opinion: general-view international model…',
   'classify-iranian': 'Checking Iranian-market models…',
 };
 

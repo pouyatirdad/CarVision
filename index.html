@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="description" content="Identify Iranian and international cars using AI. Your images are processed privately inside your browser." />
-    <title>CarVision – AI car recognition</title>
+    <meta name="description" content="Identify Iranian and international cars from a photo of the rear, using AI that runs privately inside your browser." />
+    <title>CarVision – rear-view car recognition</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233B82F6'/%3E%3Cpath d='M6 19l2-6a3 3 0 0 1 3-2h10a3 3 0 0 1 3 2l2 6v4h-3v-2H9v2H6z' fill='white'/%3E%3C/svg%3E" />
     <script>
       // Apply the saved/preferred theme before first paint (no flash).
@@ -39,19 +39,20 @@
     <main id="main" class="container">
       <section class="hero" aria-labelledby="hero-title">
         <p class="eyebrow">Private · In-browser · No account</p>
-        <h1 id="hero-title">Identify Iranian and international cars with AI</h1>
+        <h1 id="hero-title">Identify a car from a photo of its rear</h1>
         <p class="lead">
-          Identify Iranian and international cars using artificial intelligence. Your images are processed privately inside your browser.
+          Upload a photo of the rear of your car. CarVision recognises Iranian and imported vehicles from the tail lights, trunk and
+          badges – privately, inside your browser.
         </p>
       </section>
 
       <div id="upload-error" class="alert error" role="alert" hidden></div>
 
       <section id="upload-section" aria-label="Upload an image">
-        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-describedby="drop-hint" aria-label="Choose or drop a car photo">
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-describedby="drop-hint" aria-label="Choose or drop a photo of the rear of a car">
           <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M24 32V10m0 0-8 8m8-8 8 8M8 30v6a3 3 0 0 0 3 3h26a3 3 0 0 0 3-3v-6" /></svg>
-          <p class="drop-title">Drag &amp; drop a car photo here</p>
-          <p id="drop-hint" class="muted">JPG, PNG or WEBP · up to 15 MB</p>
+          <p class="drop-title">Upload a photo of the rear of your car.</p>
+          <p id="drop-hint" class="muted">Drag &amp; drop or browse · JPG, PNG or WEBP · up to 15 MB</p>
           <div class="drop-actions">
             <button id="browse-btn" class="btn primary" type="button">Browse files</button>
             <button id="camera-btn" class="btn" type="button">Take a photo</button>
@@ -59,6 +60,22 @@
           <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden />
           <input id="camera-input" type="file" accept="image/*" capture="environment" hidden />
         </div>
+        <figure class="rear-example" aria-labelledby="rear-example-cap">
+          <svg viewBox="0 0 240 150" width="240" height="150" role="img" aria-label="Example framing: the whole rear of the car, straight on or slightly angled">
+            <rect x="1" y="1" width="238" height="148" rx="10" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-dasharray="5 4" />
+            <path d="M58 70l12-30c3-7 9-11 17-11h66c8 0 14 4 17 11l12 30" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" />
+            <path d="M80 64l9-22h62l9 22z" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+            <rect x="44" y="70" width="152" height="44" rx="8" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="3" />
+            <rect x="50" y="78" width="34" height="12" rx="3" fill="#ef4444" /><rect x="156" y="78" width="34" height="12" rx="3" fill="#ef4444" />
+            <rect x="100" y="96" width="40" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2" />
+            <rect x="108" y="78" width="24" height="7" rx="2" fill="currentColor" fill-opacity=".55" />
+            <rect x="52" y="114" width="22" height="16" rx="3" fill="currentColor" /><rect x="166" y="114" width="22" height="16" rx="3" fill="currentColor" />
+          </svg>
+          <figcaption id="rear-example-cap" class="muted small">
+            Good: the whole rear in frame (both tail lights), straight or slightly angled, any distance, day or night. Readable badges help
+            but are not required. Front, side and interior photos are not supported.
+          </figcaption>
+        </figure>
       </section>
 
       <section id="workspace" class="workspace" aria-label="Recognition" hidden>
@@ -93,17 +110,14 @@
       <section class="grid-2" aria-label="Supported vehicles and privacy">
         <div class="panel">
           <h2>What it can recognise</h2>
-          <p class="muted">
-            Two specialised models run side by side: one trained on 27 popular Iranian-market models and one on 196 international
-            makes &amp; models.
-          </p>
-          <h3>Iranian-market examples</h3>
-          <ul class="chips" id="chips-iran"></ul>
-          <h3>International examples</h3>
-          <ul class="chips" id="chips-intl"></ul>
+          <p class="muted" id="coverage-summary">Loading coverage…</p>
+          <h3>Recognised from rear photos (trained on rear images)</h3>
+          <ul class="chips" id="chips-trained"></ul>
+          <h3>Few or no rear training photos (text description + up to 9 photos – less reliable)</h3>
+          <ul class="chips" id="chips-zeroshot"></ul>
           <p class="muted small">
-            The international model was trained on cars from roughly 1991–2012 (Stanford Cars). Newer cars may be identified as a
-            similar older model or reported as “uncertain”.
+            Every other vehicle in the local database can only be identified from readable badge text (OCR). Measured accuracy and
+            limitations are documented in the project's <code>docs/REAR-VIEW.md</code>.
           </p>
         </div>
         <div class="panel privacy">
@@ -122,7 +136,9 @@
     <footer class="site-footer">
       <div class="container">
         <p>
-          Models: YOLOX-tiny detector (Apache-2.0, Megvii) · ResNet18 Iranian car classifier (MIT,
+          Models: YOLOX-tiny detector (Apache-2.0, Megvii) · CLIP ViT-B/32 image encoder (MIT,
+          <a href="https://github.com/mlfoundations/open_clip" rel="noopener">OpenCLIP</a>, DataComp-1B weights) with a rear-view head
+          trained for CarVision · optional older general-view classifiers: ResNet18 Iranian car classifier (MIT,
           <a href="https://github.com/RezaGooner/Multi-Task-Iranian-Vehicle-Monitoring-System" rel="noopener">RezaGooner</a>) · ViT-B/16
           Stanford Cars classifier (Apache-2.0,
           <a href="https://huggingface.co/therealcyberlord/stanford-car-vit-patch16" rel="noopener">therealcyberlord</a>) · ONNX Runtime Web (MIT).
